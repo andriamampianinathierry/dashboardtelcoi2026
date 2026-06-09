@@ -1,0 +1,2097 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DASHBOARD 2026 – TELCO OI</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+:root{--bg:#e8e8e8;--surface:#f5f5f5;--surface2:#efefef;--border:#cccccc;--accent:#0abfbc;--accent2:#0abfbc;--accent3:#7dd8d6;--accent4:#e05c5c;--text:#222222;--muted:#777777;--card-glow:0 0 30px rgba(10,191,188,0.10);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+.header{background:linear-gradient(135deg,#d0d0d0 0%,#e0e0e0 50%,#d0d0d0 100%);border-bottom:1px solid var(--border);padding:18px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.header-left{display:flex;align-items:center;gap:16px;}
+.logo{width:40px;height:40px;background:linear-gradient(135deg,#0abfbc,#7dd8d6);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.header h1{font-size:1.15rem;font-weight:600;letter-spacing:-0.02em;}
+.header h1 span{color:var(--accent);}
+.header-badge{background:rgba(0,201,167,0.1);border:1px solid rgba(0,201,167,0.3);color:var(--accent);font-size:0.7rem;font-family:'JetBrains Mono',monospace;padding:3px 10px;border-radius:20px;letter-spacing:0.05em;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.6;}}
+@keyframes syncFlash{0%{box-shadow:inset 0 0 0 2px rgba(10,191,188,0.6);}100%{box-shadow:none;}}
+.last-update{font-size:0.72rem;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+.main{padding:24px 32px;max-width:1600px;margin:0 auto;}
+#loadingOverlay{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:9999;transition:opacity 0.5s;}
+#loadingOverlay.hidden{opacity:0;pointer-events:none;}
+.spinner{width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#loadingMsg{color:var(--muted);font-size:0.85rem;font-family:'JetBrains Mono',monospace;}
+#errorBanner{display:none;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.4);color:#c0392b;padding:14px 20px;border-radius:12px;margin-bottom:20px;font-size:0.82rem;}
+#errorBanner.show{display:block;}
+#warnBanner{display:none;background:rgba(180,120,0,0.08);border:1px solid rgba(180,140,0,0.3);color:#7a5c00;padding:10px 16px;border-radius:10px;margin-bottom:14px;font-size:0.78rem;font-family:'JetBrains Mono',monospace;}
+#warnBanner.show{display:block;}
+#configPanel{background:var(--surface);border:1px solid rgba(0,201,167,0.3);border-radius:14px;padding:20px 24px;margin-bottom:20px;display:none;}
+#configPanel.show{display:block;}
+#configPanel h3{font-size:0.88rem;font-weight:600;color:var(--accent);margin-bottom:12px;}
+#configPanel p{font-size:0.78rem;color:var(--muted);margin-bottom:10px;line-height:1.6;}
+#configPanel ol{font-size:0.78rem;color:var(--muted);padding-left:20px;margin-bottom:14px;line-height:1.8;}
+#configPanel ol li strong{color:var(--text);}
+.config-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+#csvUrlInput{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:0.75rem;padding:9px 12px;border-radius:8px;outline:none;min-width:300px;}
+#csvUrlInput:focus{border-color:var(--accent);}
+.btn-load{background:linear-gradient(135deg,#0abfbc,#089e9b);color:#fff;border:none;font-family:'Sora',sans-serif;font-weight:600;font-size:0.82rem;padding:9px 18px;border-radius:8px;cursor:pointer;white-space:nowrap;}
+#mapperPanel{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:20px;display:none;}
+#mapperPanel.show{display:block;}
+#mapperPanel h3{font-size:0.88rem;font-weight:600;color:var(--accent3);margin-bottom:10px;}
+#mapperPanel p{font-size:0.78rem;color:var(--muted);margin-bottom:14px;}
+.mapper-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:16px;}
+.mapper-field{display:flex;flex-direction:column;gap:4px;}
+.mapper-label{font-size:0.68rem;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:0.07em;}
+.mapper-label span{color:var(--accent);}
+.mapper-field select{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Sora',sans-serif;font-size:0.78rem;padding:7px 10px;border-radius:7px;outline:none;cursor:pointer;}
+.btn-confirm{background:linear-gradient(135deg,#7dd8d6,#5ccac7);color:#fff;border:none;font-family:'Sora',sans-serif;font-weight:600;font-size:0.82rem;padding:9px 20px;border-radius:8px;cursor:pointer;}
+.filters-bar{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 20px;display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;margin-bottom:24px;box-shadow:var(--card-glow);}
+.filter-group{display:flex;flex-direction:column;gap:5px;}
+.filter-label{font-size:0.68rem;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;}
+.filter-group select,.filter-group input{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Sora',sans-serif;font-size:0.82rem;padding:8px 12px;border-radius:8px;outline:none;cursor:pointer;min-width:150px;transition:border-color 0.2s;}
+.filter-group input[type="date"]{min-width:140px;}
+.btn-apply{background:linear-gradient(135deg,#0abfbc,#089e9b);color:#fff;border:none;font-family:'Sora',sans-serif;font-weight:600;font-size:0.82rem;padding:9px 20px;border-radius:8px;cursor:pointer;}
+.btn-reset{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:'Sora',sans-serif;font-size:0.82rem;padding:9px 16px;border-radius:8px;cursor:pointer;}
+#tBoutiqueTablesGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;}
+@media(max-width:1100px){#tBoutiqueTablesGrid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:650px){#tBoutiqueTablesGrid{grid-template-columns:1fr;}}
+#tBoutiqueTablesGrid .panel{border-radius:10px;overflow:hidden;}
+#tBoutiqueTablesGrid .panel table tbody tr:last-child td{border-bottom:none;}
+#tBoutiqueTablesGrid .panel table tbody tr td{border-bottom:1px solid rgba(150,150,150,0.18);}
+#tBoutiqueTablesGrid .panel table tbody tr:hover td{background:rgba(0,0,0,0.03);}
+.section-title{font-size:0.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px;}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px;position:relative;overflow:hidden;transition:transform 0.2s,box-shadow 0.2s;}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,0.15);}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.kpi-card.green::before{background:linear-gradient(90deg,#0abfbc,transparent);}
+.kpi-card.blue::before{background:linear-gradient(90deg,#7dd8d6,transparent);}
+.kpi-card.amber::before{background:linear-gradient(90deg,#b0b0b0,transparent);}
+.kpi-card.red::before{background:linear-gradient(90deg,#e05c5c,transparent);}
+.kpi-card.purple::before{background:linear-gradient(90deg,#aaaaaa,transparent);}
+.kpi-card.teal::before{background:linear-gradient(90deg,#5ccac7,transparent);}
+.kpi-icon{font-size:1.2rem;margin-bottom:10px;opacity:0.85;}
+.kpi-label{font-size:0.7rem;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;}
+.kpi-value{font-size:1.8rem;font-weight:700;font-family:'JetBrains Mono',monospace;letter-spacing:-0.03em;line-height:1;}
+.kpi-card.green .kpi-value{color:#0abfbc;}
+.kpi-card.blue .kpi-value{color:#7dd8d6;}
+.kpi-card.amber .kpi-value{color:#666;}
+.kpi-card.red .kpi-value{color:#e05c5c;}
+.kpi-card.purple .kpi-value{color:#555;}
+.kpi-card.teal .kpi-value{color:#5ccac7;}
+.kpi-sub{font-size:0.68rem;color:var(--muted);margin-top:4px;}
+.kpi-dual{display:flex;gap:14px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);}
+.kpi-dual-item{display:flex;flex-direction:column;gap:2px;flex:1;}
+.kpi-dual-label{font-size:0.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;font-weight:500;}
+.kpi-dual-value{font-size:1.05rem;font-weight:700;font-family:'JetBrains Mono',monospace;letter-spacing:-0.02em;}
+.kpi-dual-value.tiffany{color:#0abfbc;}
+.kpi-dual-value.grey{color:#888;}
+.kpi-dual-divider{width:1px;background:var(--border);align-self:stretch;}
+.full-width-panel{margin-bottom:24px;}
+.dash-table td.num-tiffany{text-align:right;color:#0abfbc;font-family:'JetBrains Mono',monospace;font-size:0.76rem;font-weight:600;}
+.dash-table td.num-red{text-align:right;color:#e05c5c;font-family:'JetBrains Mono',monospace;font-size:0.76rem;font-weight:600;}
+.dash-table td.num-grey{text-align:right;color:#666;font-family:'JetBrains Mono',monospace;font-size:0.76rem;}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.panel-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.panel-title{font-size:0.82rem;font-weight:600;letter-spacing:-0.01em;}
+.panel-badge{font-size:0.65rem;color:var(--muted);font-family:'JetBrains Mono',monospace;background:var(--bg);border:1px solid var(--border);padding:2px 8px;border-radius:20px;}
+.panel-body{padding:16px 20px;}
+.dash-table{width:100%;border-collapse:collapse;font-size:0.78rem;}
+.dash-table th{text-align:left;padding:8px 12px;color:var(--muted);font-size:0.68rem;font-weight:500;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid var(--border);background:var(--bg);}
+.dash-table td{padding:10px 12px;border-bottom:1px solid rgba(150,150,150,0.3);color:var(--text);}
+.dash-table tr:last-child td{border-bottom:none;}
+.dash-table tr:hover td{background:rgba(0,0,0,0.03);}
+.dash-table .mono{font-family:'JetBrains Mono',monospace;font-size:0.76rem;}
+.dash-table .num{text-align:right;}
+.pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:0.68rem;font-weight:600;font-family:'JetBrains Mono',monospace;}
+.pill-green{background:rgba(10,191,188,0.15);color:#0abfbc;}
+.pill-amber{background:rgba(120,120,120,0.15);color:#555;}
+.pill-red{background:rgba(224,92,92,0.15);color:#e05c5c;}
+.chart-container{position:relative;height:300px;padding:8px 4px 0;}
+.full-panel{margin-bottom:24px;}
+.empty-state{text-align:center;padding:30px;color:var(--muted);font-size:0.82rem;}
+.table-scroll{overflow-x:auto;}
+.data-info{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:16px;padding:10px 16px;background:rgba(10,191,188,0.04);border:1px solid rgba(10,191,188,0.15);border-radius:10px;font-size:0.72rem;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+.data-info strong{color:var(--accent);}
+.btn-sync{background:rgba(10,191,188,0.15);border:1px solid rgba(10,191,188,0.4);color:var(--accent);font-family:'Sora',sans-serif;font-size:0.75rem;font-weight:600;padding:5px 14px;border-radius:20px;cursor:pointer;transition:all 0.2s;}
+.btn-sync:hover{background:rgba(10,191,188,0.25);}
+.btn-sync:disabled{opacity:0.5;cursor:not-allowed;}
+
+/* ── NAVIGATION TABS ── */
+.nav-tabs{display:flex;gap:10px;background:var(--surface);border-bottom:2px solid var(--border);padding:10px 32px;position:sticky;top:72px;z-index:90;max-width:100%;align-items:center;}
+.nav-tab{padding:9px 20px;font-size:0.82rem;font-weight:700;color:var(--muted);cursor:pointer;border:2px solid var(--border);border-radius:22px;background:var(--bg);transition:all 0.2s;letter-spacing:0.01em;user-select:none;display:flex;align-items:center;gap:7px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,0.07);}
+.nav-tab:hover{color:var(--text);background:var(--surface2);border-color:#bbb;box-shadow:0 4px 12px rgba(0,0,0,0.12);}
+.nav-tab.active{color:#fff;background:linear-gradient(135deg,#0abfbc,#089e9b);border-color:#0abfbc;box-shadow:0 4px 14px rgba(10,191,188,0.35);}
+.page{display:none;}.page.active{display:block;}
+
+/* ── PAGE TICKETS ── */
+.t-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px;}
+.status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px;}
+.status-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;text-align:center;position:relative;overflow:hidden;}
+.status-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--sc);}
+.status-card .sc-label{font-size:0.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;}
+.status-card .sc-count{font-size:1.6rem;font-weight:700;font-family:'JetBrains Mono',monospace;letter-spacing:-0.03em;color:var(--text);}
+.status-card .sc-pct{font-size:0.72rem;color:var(--muted);margin-top:3px;font-family:'JetBrains Mono',monospace;}
+.t-filters{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 18px;display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;margin-bottom:20px;}
+.t-filter-group{display:flex;flex-direction:column;gap:4px;}
+.t-filter-label{font-size:0.67rem;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;}
+.t-filter-group select{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Sora',sans-serif;font-size:0.8rem;padding:7px 11px;border-radius:8px;outline:none;cursor:pointer;min-width:140px;transition:border-color 0.2s;}
+.t-filter-group select:focus{border-color:var(--accent);}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;}
+@media(max-width:900px){.two-col{grid-template-columns:1fr;}}
+.rank-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(150,150,150,0.2);}
+.rank-row:last-child{border-bottom:none;}
+.rank-num{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:0.62rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'JetBrains Mono',monospace;}
+.rank-num.r2{background:#7dd8d6;}.rank-num.r3{background:#aaa;}.rank-num.r4,.rank-num.r5{background:var(--border);}
+.rank-label{flex:1;font-size:0.78rem;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rank-bar-wrap{width:80px;height:6px;background:var(--border);border-radius:3px;overflow:hidden;flex-shrink:0;}
+.rank-bar{height:100%;background:linear-gradient(90deg,#0abfbc,#7dd8d6);border-radius:3px;transition:width 0.6s;}
+.rank-count{font-size:0.72rem;font-family:'JetBrains Mono',monospace;color:var(--accent);font-weight:700;min-width:28px;text-align:right;flex-shrink:0;}
+.rank-pct{font-size:0.68rem;font-family:'JetBrains Mono',monospace;color:var(--muted);min-width:42px;text-align:right;flex-shrink:0;}
+.dmt-display{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:10px;}
+.dmt-box{flex:1;min-width:160px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center;display:flex;flex-direction:column;justify-content:center;}
+.dmt-box .dmt-lbl{font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dmt-box .dmt-val{font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--accent);
+  font-size:clamp(1rem,2vw,2rem);
+  word-break:break-word;overflow-wrap:anywhere;line-height:1.2;}
+.dmt-box .dmt-sub{font-size:0.72rem;color:var(--muted);margin-top:6px;line-height:1.4;word-break:break-word;}
+#tConfigPanel{background:var(--surface);border:1px solid rgba(0,201,167,0.3);border-radius:14px;padding:18px 22px;margin-bottom:18px;}
+#tConfigPanel h3{font-size:0.86rem;font-weight:600;color:var(--accent);margin-bottom:10px;}
+#tConfigPanel p{font-size:0.76rem;color:var(--muted);margin-bottom:10px;line-height:1.6;}
+.t-config-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+#tCsvUrlInput{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:0.74rem;padding:8px 12px;border-radius:8px;outline:none;min-width:260px;}
+#tCsvUrlInput:focus{border-color:var(--accent);}
+#tErrorBanner{display:none;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.4);color:#c0392b;padding:12px 18px;border-radius:10px;margin-bottom:16px;font-size:0.8rem;}
+#tErrorBanner.show{display:block;}
+
+/* ── TABLEAU COMPARAISON MENSUELLE ── */
+.monthly-table-wrap{overflow-x:auto;margin-bottom:0;}
+.monthly-table{width:100%;border-collapse:collapse;font-size:0.76rem;white-space:nowrap;}
+.monthly-table thead tr:first-child th{background:var(--bg);padding:8px 14px;color:var(--muted);font-size:0.65rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;border-bottom:2px solid var(--border);text-align:center;}
+.monthly-table thead tr:first-child th:first-child{text-align:left;position:sticky;left:0;z-index:2;background:var(--bg);}
+.monthly-table thead tr:nth-child(2) th{background:var(--surface2);padding:6px 10px;font-size:0.65rem;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap;}
+.monthly-table thead tr:nth-child(2) th:first-child{text-align:left;position:sticky;left:0;z-index:2;background:var(--surface2);}
+.monthly-table tbody tr:hover td{background:rgba(10,191,188,0.04);}
+.monthly-table tbody tr:last-child td{border-bottom:none;}
+.monthly-table td{padding:9px 12px;border-bottom:1px solid rgba(150,150,150,0.18);text-align:right;font-family:'JetBrains Mono',monospace;font-size:0.74rem;color:var(--text);}
+.monthly-table td:first-child{text-align:left;font-family:'Sora',sans-serif;font-weight:600;font-size:0.78rem;color:var(--text);background:var(--surface);position:sticky;left:0;z-index:1;border-right:1px solid var(--border);}
+.monthly-table tbody tr:nth-child(even) td:first-child{background:var(--surface2);}
+.monthly-table .mt-kpi-label{font-size:0.65rem;font-weight:500;color:var(--muted);display:block;text-transform:uppercase;letter-spacing:0.06em;}
+.monthly-table .mt-num{color:#0abfbc;font-weight:600;}
+.monthly-table .mt-num-red{color:#e05c5c;font-weight:600;}
+.monthly-table .mt-num-grey{color:#666;}
+.monthly-table .mt-pct-good{color:#0abfbc;font-weight:700;}
+.monthly-table .mt-pct-mid{color:#b07800;font-weight:700;}
+.monthly-table .mt-pct-bad{color:#e05c5c;font-weight:700;}
+.monthly-table .mt-total{background:rgba(10,191,188,0.06);font-weight:700;}
+.monthly-table .mt-total td{color:var(--text);border-top:2px solid rgba(10,191,188,0.3);}
+.monthly-table .mt-total td:first-child{color:var(--accent);}
+.mt-section-header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border);}
+</style>
+</head>
+<body>
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <div id="loadingMsg">Connexion à Google Sheets…</div>
+</div>
+<div class="header">
+  <div class="header-left">
+    <div class="logo">📊</div>
+    <div><h1>DASH <span>BOARD 2026</span> — TELCO OI</h1></div>
+    <span class="header-badge">LIVE</span>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+    <div class="last-update" id="lastUpdate">Mise à jour : —</div>
+    <div style="font-size:0.68rem;color:var(--accent);font-family:'JetBrains Mono',monospace;" id="syncCountdown">⟳ auto-sync dans 2:00</div>
+    <button class="btn-sync" id="btnSync" onclick="syncNow()">⟳ Synchroniser</button>
+    <img src="data:image/png;base64,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" style="height:26px;object-fit:contain;opacity:0.9;margin-top:2px;" alt="TELCO 01" />
+  </div>
+</div>
+
+<!-- ── NAVIGATION ── -->
+<div class="nav-tabs">
+  <div class="nav-tab active" id="tab1" onclick="switchTab(1)">📊 TELCO OI — Appels</div>
+  <div class="nav-tab" id="tab2" onclick="switchTab(2)">🎫 VDC</div>
+</div>
+
+<!-- ══ PAGE 1 ══ -->
+<div id="page1" class="page active">
+<div class="main">
+  <div id="errorBanner"></div>
+  <div id="warnBanner"></div>
+  <div id="configPanel">
+    <h3>🔗 Connexion à l'onglet TELCO OI</h3>
+    <p>Votre Google Sheet doit être <strong>publié sur le web en CSV</strong> : Fichier → Partager → Publier sur le web → Sélectionner l'onglet → Format CSV → Publier.</p>
+    <div class="config-row">
+      <input type="text" id="csvUrlInput" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?gid=...&output=csv" />
+      <button class="btn-load" onclick="loadFromUrl()">▶ Charger</button>
+    </div>
+  </div>
+  <div id="mapperPanel">
+    <h3>🗂️ Correspondance des colonnes</h3>
+    <p>Associez les colonnes détectées aux champs du dashboard.</p>
+    <div class="mapper-grid" id="mapperGrid"></div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <button class="btn-confirm" onclick="confirmMapping()">✓ Confirmer et afficher</button>
+      <span id="mapperHint" style="font-size:0.72rem;color:var(--muted);font-family:'JetBrains Mono',monospace;"></span>
+    </div>
+  </div>
+  <div class="filters-bar">
+    <div class="filter-group">
+      <span class="filter-label">📆 Mois</span>
+      <select id="filterMois" onchange="onMoisChange()"><option value="">Tous les mois</option></select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">📅 Date début</span>
+      <input type="date" id="dateFrom" />
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">📅 Date fin</span>
+      <input type="date" id="dateTo" />
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">🏢 Pôle</span>
+      <select id="filterPole"><option value="">Tous les pôles</option></select>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">📂 Sous-campagne</span>
+      <select id="filterSous"><option value="">Toutes</option></select>
+    </div>
+    <button class="btn-apply" onclick="applyFilters()">▶ Appliquer</button>
+    <button class="btn-reset" onclick="resetFilters()">↺ Réinitialiser</button>
+  </div>
+  <div class="data-info" id="dataInfo" style="display:none">
+    <span style="display:none">Source : <strong id="infoSource">—</strong></span>
+    <span>Lignes valides : <strong id="infoRows">—</strong></span>
+    <span>Lignes ignorées : <strong id="infoSkipped">—</strong></span>
+    <span>Période : <strong id="infoPeriod">—</strong></span>
+    <span>Synchro : <strong id="infoSync">—</strong></span>
+  </div>
+  <div class="section-title">Indicateurs globaux</div>
+  <div class="kpi-grid">
+    <div class="kpi-card green"><div class="kpi-icon">📞</div><div class="kpi-label">Moy. DMT (HH:MM:SS)</div><div class="kpi-value" id="kpiDmt">—</div><div class="kpi-sub">Durée Moyenne de Traitement</div></div>
+    <div class="kpi-card blue"><div class="kpi-icon">📊</div><div class="kpi-label">Volumes d'appels</div><div class="kpi-dual"><div class="kpi-dual-item"><div class="kpi-dual-label">✅ Traités</div><div class="kpi-dual-value tiffany" id="kpiTotalTraites">—</div></div><div class="kpi-dual-divider"></div><div class="kpi-dual-item"><div class="kpi-dual-label">📞 Entrants</div><div class="kpi-dual-value grey" id="kpiTotalEntrants">—</div></div></div></div>
+    <div class="kpi-card amber"><div class="kpi-icon">🏷️</div><div class="kpi-label">Taux QUALIFIÉ (%)</div><div class="kpi-value" id="kpiDmc">—</div><div class="kpi-sub" id="kpiDmcSub">QUALIFIÉ / Appels traités</div></div>
+    <div class="kpi-card purple"><div class="kpi-icon">✅</div><div class="kpi-label">Qualité de Service</div><div class="kpi-value" id="kpiQs">—</div><div class="kpi-sub">Appels traités / Total</div></div>
+    <div class="kpi-card teal"><div class="kpi-icon">⚡</div><div class="kpi-label">QS &lt; 20 sec</div><div class="kpi-value" id="kpiSl">—</div><div class="kpi-sub">Pris en – de 20s / Traités</div></div>
+    <div class="kpi-card red"><div class="kpi-icon">🎯</div><div class="kpi-label">New FCR</div><div class="kpi-value" id="kpiFcr">—</div><div class="kpi-sub">FCR / Appels traités</div></div>
+    <div class="kpi-card red"><div class="kpi-icon">📵</div><div class="kpi-label">Taux d'appels perdus</div><div class="kpi-value" id="kpiTauxPerdus">—</div><div class="kpi-sub" id="kpiTauxPerdusAbs">Appels perdus / Entrants</div></div>
+  </div>
+  <div class="section-title">Volume d'appels & Qualité de Service</div>
+  <div class="panel full-panel">
+    <div class="panel-header">
+      <span class="panel-title">📈 Appels entrants · Appels traités · QS (%) — Vue mensuelle</span>
+      <span class="panel-badge" id="chartLabel">Vue globale</span>
+    </div>
+    <div class="panel-body"><div class="chart-container"><canvas id="mainChart"></canvas></div></div>
+  </div>
+  <div class="section-title">Détail par sous-campagne</div>
+  <div class="panel full-width-panel">
+    <div class="panel-header">
+      <span class="panel-title">📋 KPI par sous-campagne</span>
+      <span class="panel-badge" id="sousBadge">—</span>
+    </div>
+    <div class="panel-body table-scroll" style="padding:0">
+      <table class="dash-table">
+        <thead>
+          <tr>
+            <th>Sous-campagne</th>
+            <th class="num">Appels entrants</th>
+            <th class="num">Appels traités</th>
+            <th class="num">Appels perdus</th>
+            <th class="num">Taux perdus (%)</th>
+            <th class="num">Moy. DMT (HH:MM:SS)</th>
+            <th class="num">QS &lt; 20s</th>
+          </tr>
+        </thead>
+        <tbody id="tbodySous"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── TABLEAU COMPARAISON MENSUELLE — PAGE 1 ── -->
+  <div class="section-title">Comparaison mensuelle</div>
+  <div class="panel full-width-panel">
+    <div class="mt-section-header">
+      <span class="panel-title">📅 KPIs par mois</span>
+      <span class="panel-badge" id="monthlyBadge1">—</span>
+    </div>
+    <div class="monthly-table-wrap" style="padding:0;">
+      <table class="monthly-table" id="monthlyTable1">
+        <thead id="monthlyHead1"><tr><th>KPI</th></tr></thead>
+        <tbody id="monthlyBody1">
+          <tr><td colspan="2" class="empty-state" style="text-align:center;padding:20px;">En attente de données…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+</div>
+<!-- ══ FIN PAGE 1 ══ -->
+
+<!-- ══ PAGE 2 — TICKETS ══ -->
+<div id="page2" class="page">
+<div class="main">
+  <div id="tErrorBanner"></div>
+  <div id="tLoadLabel" style="display:none;align-items:center;gap:10px;padding:12px 16px;background:rgba(10,191,188,0.07);border:1px solid rgba(10,191,188,0.2);border-radius:10px;margin-bottom:14px;font-size:0.8rem;color:var(--accent);font-family:'JetBrains Mono',monospace;"><div class="spinner" style="width:20px;height:20px;border-width:2px;"></div> Chargement des données Tickets…</div>
+
+  <!-- Config panel Tickets -->
+  <div id="tConfigPanel" style="display:none;">
+    <h3>🔗 Connexion à l'onglet Tickets</h3>
+    <p>Publiez votre Google Sheet en CSV : <strong>Fichier → Partager → Publier sur le web → Onglet "Tickets" → Format CSV → Publier</strong>. Collez l'URL ci-dessous.</p>
+    <div class="t-config-row">
+      <input type="text" id="tCsvUrlInput" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?gid=TICKETS_GID&output=csv" />
+      <button class="btn-load" onclick="tLoadFromUrl()">▶ Charger</button>
+      <button class="btn-sync" id="tBtnSync" onclick="tSyncNow()">⟳ Synchroniser</button>
+    </div>
+    <p style="margin-top:10px;font-size:0.72rem;color:var(--muted);">Colonnes attendues : <strong>DATE_RECEPTION_S2</strong> · <strong>DATE_DEBUT_TRAITEMENT</strong> · <strong>DATE_ENREGISTREMENT</strong> · <strong>DMT</strong> (HH:MM:SS) · <strong>ZONE</strong> · <strong>TYPE</strong> · <strong>STATUT</strong> · <strong>MOTIF_REJET</strong> · <strong>BOUTIQUE</strong></p>
+  </div>
+  <div style="text-align:right;margin-bottom:10px;"><button class="btn-reset" style="font-size:0.72rem;" onclick="document.getElementById('tConfigPanel').style.display=document.getElementById('tConfigPanel').style.display==='none'?'block':'none'">⚙️ Modifier la source</button></div>
+
+  <!-- Filters -->
+  <div class="t-filters">
+    <div class="t-filter-group">
+      <span class="t-filter-label">📆 Mois</span>
+      <select id="tFilterMois" onchange="tApplyFilters()"><option value="">Tous les mois</option></select>
+    </div>
+    <div class="t-filter-group">
+      <span class="t-filter-label">🌍 Zone</span>
+      <select id="tFilterZone" onchange="tApplyFilters()"><option value="">Toutes les zones</option></select>
+    </div>
+    <div class="t-filter-group">
+      <span class="t-filter-label">🏷️ Type</span>
+      <select id="tFilterType" onchange="tApplyFilters()"><option value="">Tous les types</option></select>
+    </div>
+    <div class="t-filter-group">
+      <span class="t-filter-label">📅 Date enreg. début</span>
+      <input type="date" id="tDateFrom" class="t-filter-group" style="background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Sora',sans-serif;font-size:0.8rem;padding:7px 11px;border-radius:8px;outline:none;" onchange="tApplyFilters()" />
+    </div>
+    <div class="t-filter-group">
+      <span class="t-filter-label">📅 Date enreg. fin</span>
+      <input type="date" id="tDateTo" class="t-filter-group" style="background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'Sora',sans-serif;font-size:0.8rem;padding:7px 11px;border-radius:8px;outline:none;" onchange="tApplyFilters()" />
+    </div>
+    <button class="btn-reset" onclick="tResetFilters()">↺ Réinitialiser</button>
+  </div>
+
+  <!-- KPI DMT / DMPC -->
+  <div class="section-title">Durées de traitement</div>
+  <div class="dmt-display" style="container-type:inline-size;">
+    <div class="dmt-box">
+      <div class="dmt-lbl">⏱ DMT — Durée Moyenne de Traitement</div>
+      <div class="dmt-val" id="tKpiDmt">—</div>
+      <div class="dmt-sub" id="tKpiDmtSub">Fin traitement − Début traitement (moyenne)</div>
+    </div>
+    <div class="dmt-box" style="border-color:rgba(10,191,188,0.3);">
+      <div class="dmt-lbl">📬 DMPC — Délai moyen de prise en charge</div>
+      <div class="dmt-val" id="tKpiDmpc" style="color:#7dd8d6;">—</div>
+      <div class="dmt-sub" id="tKpiDmpcSub">Date début traitement − Réception S2 (HH:MM:SS)</div>
+    </div>
+    <div class="dmt-box">
+      <div class="dmt-lbl">🎫 Total tickets</div>
+      <div class="dmt-val" id="tKpiTotal" style="color:#555;">—</div>
+      <div class="dmt-sub">Lignes chargées après filtres</div>
+    </div>
+    <div class="dmt-box" style="border-color:rgba(224,92,92,0.3);">
+      <div class="dmt-lbl">🚫 Total rejets</div>
+      <div class="dmt-val" id="tKpiRejets" style="color:#e05c5c;">—</div>
+      <div class="dmt-sub">Tickets avec motif de rejet renseigné</div>
+    </div>
+    <div class="dmt-box" style="border-color:rgba(92,202,199,0.4);background:rgba(10,191,188,0.04);">
+      <div class="dmt-lbl">⚡ DMPC &lt; 24h</div>
+      <div class="dmt-val" id="tKpiSous24h" style="color:#0abfbc;">—</div>
+      <div style="margin-top:4px;margin-bottom:2px;"><span id="tKpiSous24hPct" style="font-size:1rem;font-weight:700;font-family:'JetBrains Mono',monospace;color:#0abfbc;">—</span> <span style="font-size:0.68rem;color:var(--muted);">des tickets traités</span></div>
+      <div class="dmt-sub" id="tKpiSous24hSub">Tickets pris en charge en moins de 24h (DMPC)</div>
+    </div>
+  </div>
+
+  <!-- Statuts -->
+  <div class="section-title">Taux par statut</div>
+  <div class="status-grid" id="tStatusGrid">
+    <div class="status-card" style="--sc:#ccc;"><div class="sc-label">Chargement…</div><div class="sc-count">—</div></div>
+  </div>
+
+  <!-- Top 5 motifs + Top 5 boutiques -->
+  <div class="two-col">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">🚫 TOP 5 — Motifs de rejet</span>
+        <span class="panel-badge" id="tTotalRejBadge">—</span>
+      </div>
+      <div class="panel-body" id="tTop5Motifs">
+        <div class="empty-state">En attente de données…</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">🏪 TOP 5 — Boutiques par rejets</span>
+        <span class="panel-badge" id="tTotalBoutBadge">—</span>
+      </div>
+      <div class="panel-body" id="tTop5Boutiques">
+        <div class="empty-state">En attente de données…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top 5 boutiques — tableaux individuels -->
+  <div class="section-title">Top 5 Motifs de rejet par boutique</div>
+  <div id="tBoutiqueTablesGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;">
+    <div class="panel" style="grid-column:1/-1;"><div class="panel-body"><div class="empty-state">En attente de données…</div></div></div>
+  </div>
+
+  <!-- ── TABLEAU COMPARAISON MENSUELLE — PAGE 2 ── -->
+  <div class="section-title">Comparaison mensuelle</div>
+  <div class="panel full-width-panel">
+    <div class="mt-section-header">
+      <span class="panel-title">📅 KPIs tickets par mois</span>
+      <span class="panel-badge" id="monthlyBadge2">—</span>
+    </div>
+    <div class="monthly-table-wrap" style="padding:0;">
+      <table class="monthly-table" id="monthlyTable2">
+        <thead id="monthlyHead2"><tr><th>KPI</th></tr></thead>
+        <tbody id="monthlyBody2">
+          <tr><td colspan="2" class="empty-state" style="text-align:center;padding:20px;">En attente de données…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+</div>
+<!-- ══ FIN PAGE 2 ══ -->
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+const DEFAULT_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTTLcpVylzw651p7XZ3t0uwWM31qWVKDHMXqcUho9_Nmms4Ut6VM7FsJ7H0Z4AQV3knU5hHMUKzDJza/pub?gid=0&single=true&output=csv';
+const T_TICKETS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRuLVk-JoRxWuHprmDwfRGp6UpwyN5nVhoElQvzKlGiPv7mVaf8tj_bXs3fl0uztwj7y0OnuySrh62h/pub?gid=0&single=true&output=csv';
+
+const CORS_PROXIES = [
+  url => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  url => `https://thingproxy.freeboard.io/fetch/${url}`,
+  url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+];
+
+// Champs internes → synonymes de colonnes (normalisés)
+const FIELD_SYNS = {
+  date:     ['dateappel','date_appel','date','jour','day'],
+  pole:     ['poles','pole_s','pole','axe','equipe','team'],
+  sous:     ['souscam','sous_cam','souscampagne','sous','campagne'],
+  file:     ['nomcam','nom_cam','nomcampagne','campaign','file','queue'],
+  entrants: ['appels','appels_entrants','entrant','presented','incoming'],
+  traites:  ['appelstrai','appels_trai','appels_traites','traites','traite','answered','handled'],
+  perdus:   ['appelsper','appels_per','appels_perdus','perdus','perdu','abandoned','lost'],
+  sl20:     ['sl20sec','sl20','sl_20','sla20','sl<20','sous20'],
+  sl10:     ['sl10sec','sl10','sl_10','sla10','sl<10','sous10'],
+  fcr:      ['newfcr','new_fcr','fcr','firstcall','firstcontact'],
+  dmt:      ['dmt','dureetraitement','duree_traitement','tht','aht'],
+  dmpc:     ['dureepc','duree_pc','dmpc','postcall','acw','aftercall','wrapup'],
+  qualif:   ['nomquai','nom_quai','nomqualification','nom_qualification','nomqualif','qualification','qualif','qualifie'],
+  agent:    ['idagent','id_agent','agentid','agent'],
+  mois:     ['mois','month'],
+};
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let RAW_DATA = [], filtered = [], chart = null;
+let csvHeaders = [], mapping = {}, activeUrl = '';
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+// ── Auto-fit texte dans les cartes dmt-box ────────────────────────────────────
+function autoFitDmtVals() {
+  document.querySelectorAll('.dmt-box .dmt-val').forEach(el => {
+    el.style.fontSize = ''; // reset
+    const box = el.parentElement;
+    if (!box) return;
+    const maxW = box.clientWidth - 32; // padding 16px each side
+    let size = parseFloat(getComputedStyle(el).fontSize);
+    let iter = 0;
+    while (el.scrollWidth > maxW && size > 9 && iter < 20) {
+      size -= 0.5;
+      el.style.fontSize = size + 'px';
+      iter++;
+    }
+  });
+}
+
+// ─── SYNC MANUELLE ────────────────────────────────────────────────────────────
+async function syncNow() {
+  const url = activeUrl || DEFAULT_URL;
+  const btn = document.getElementById('btnSync');
+  btn.disabled = true;
+  btn.textContent = '⟳ Chargement…';
+  showLoading('Connexion à Google Sheets…');
+  clearError(); clearWarn();
+  try {
+    await fetchAndProcess(url);
+  } catch(e) {
+    hideLoading();
+    showError('Impossible de joindre Google Sheets. Vérifiez que le sheet est publié en CSV. Détail : ' + e.message);
+    document.getElementById('configPanel').classList.add('show');
+  }
+  btn.disabled = false;
+  btn.textContent = '⟳ Synchroniser';
+}
+
+async function loadFromUrl() {
+  const url = document.getElementById('csvUrlInput').value.trim();
+  if (!url) { showError('Veuillez entrer une URL CSV valide.'); return; }
+  activeUrl = url;
+  await syncNow();
+}
+
+// ─── FETCH CSV ────────────────────────────────────────────────────────────────
+async function fetchCSV(url) {
+  // 1. Essai direct (fonctionne si le sheet est public et sans restriction CORS)
+  try {
+    const r = await fetch(url, { cache: 'no-store', redirect: 'follow' });
+    if (r.ok) {
+      const t = await r.text();
+      if (t && t.trim().length > 10) return t;
+    }
+  } catch(e) {}
+
+  // 2. Fallback sur chaque proxy CORS
+  for (const proxy of CORS_PROXIES) {
+    try {
+      const r = await fetch(proxy(url), { cache: 'no-store' });
+      if (r.ok) {
+        const t = await r.text();
+        if (t && t.trim().length > 10) return t;
+      }
+    } catch(e) {}
+  }
+  throw new Error('Tous les proxies CORS ont échoué. Vérifiez que le sheet est public.');
+}
+
+// ─── FETCH & PROCESS ──────────────────────────────────────────────────────────
+async function fetchAndProcess(url) {
+  activeUrl = url;
+  const csvText = await fetchCSV(url);
+
+  const rows = parseCSV(csvText);
+  if (rows.length < 2) throw new Error('Le CSV est vide ou ne contient pas de données.');
+
+  // En-têtes : nettoyage complet
+  csvHeaders = rows[0].map(h => cleanStr(h));
+  const dataRows = rows.slice(1).filter(r => r.some(c => c.trim() !== ''));
+
+  // Détection automatique du mapping
+  mapping = autoDetectMapping(csvHeaders);
+
+  hideLoading();
+  document.getElementById('configPanel').classList.remove('show');
+
+  // Champs obligatoires manquants → afficher le mapper
+  const missing = ['date'].filter(k => mapping[k] === undefined);
+  if (missing.length > 0) {
+    showMapper(csvHeaders, missing);
+    window._pendingRows = dataRows;
+    return;
+  }
+
+  // ← ICI : on repart de zéro à chaque sync (pas de cache)
+  processData(dataRows);
+}
+
+// ─── NETTOYAGE & CONVERSION ──────────────────────────────────────────────────
+
+// Nettoyage général d'une chaîne
+function cleanStr(s) {
+  if (s === null || s === undefined) return '';
+  return String(s)
+    .trim()
+    .replace(/\u00A0/g, ' ')     // espace insécable
+    .replace(/\r/g, '')
+    .replace(/^\uFEFF/, '');     // BOM UTF-8
+}
+
+// Conversion nombre : gère virgule, espaces, %, formats mixtes
+function toNum(raw) {
+  if (raw === null || raw === undefined) return 0;
+  let s = cleanStr(raw)
+    .replace(/\s/g, '')          // espaces
+    .replace(/%$/, '')           // pourcentage trailing
+    .replace(',', '.');          // virgule décimale
+  // Si la valeur ressemble à une date sérialisée (ex: 45792), la rejeter comme nombre
+  if (/^\d{5}$/.test(s)) return 0;
+  const n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+}
+
+// Conversion date : gère DD/MM/YYYY, YYYY-MM-DD, serial Excel, avec ou sans heure
+function toDate(raw) {
+  if (!raw) return null;
+  const s = cleanStr(raw);
+  if (!s) return null;
+
+  // Serial Excel (nombre entre 40000 et 60000)
+  if (/^\d{5}$/.test(s)) {
+    const n = parseInt(s);
+    if (n > 40000 && n < 60000) {
+      const d = new Date(Date.UTC(1899, 11, 30) + n * 86400000);
+      return d.toISOString().slice(0, 10);
+    }
+  }
+
+  // YYYY-MM-DD (ISO)
+  const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (iso) return iso[1] + '-' + iso[2].padStart(2,'0') + '-' + iso[3].padStart(2,'0');
+
+  // DD/MM/YYYY ou DD-MM-YYYY ou DD.MM.YYYY (avec ou sans heure)
+  const fr = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
+  if (fr) {
+    let [, d, mo, y] = fr;
+    if (y.length === 2) y = '20' + y;
+    // Validation : jour 1-31, mois 1-12
+    if (parseInt(d) > 31 || parseInt(mo) > 12) return null;
+    return y + '-' + mo.padStart(2,'0') + '-' + d.padStart(2,'0');
+  }
+
+  return null;
+}
+
+// Conversion texte propre
+function toText(raw) {
+  return cleanStr(raw);
+}
+
+// ─── PARSING CSV ──────────────────────────────────────────────────────────────
+function parseCSV(text) {
+  const rows = []; let cur = [], field = '', inQ = false;
+  // Normalise les fins de ligne
+  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  for (let i = 0; i < lines.length; i++) {
+    const c = lines[i], n = lines[i+1];
+    if (inQ) {
+      if (c === '"' && n === '"') { field += '"'; i++; }
+      else if (c === '"') inQ = false;
+      else field += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === ',') { cur.push(field); field = ''; }
+      else if (c === '\n') {
+        cur.push(field); field = '';
+        if (cur.some(v => v.trim() !== '')) rows.push(cur);
+        cur = [];
+      } else field += c;
+    }
+  }
+  if (field || cur.length) { cur.push(field); if (cur.some(v => v.trim() !== '')) rows.push(cur); }
+  return rows;
+}
+
+// ─── AUTO-DÉTECTION MAPPING ───────────────────────────────────────────────────
+function normalizeKey(s) {
+  return s.toLowerCase()
+    .replace(/[éèêë]/g,'e').replace(/[àâä]/g,'a').replace(/[îï]/g,'i')
+    .replace(/[ùûü]/g,'u').replace(/[ôö]/g,'o').replace(/[ç]/g,'c')
+    .replace(/[\s_\-\.\/\(\)<>]/g,'');
+}
+
+function autoDetectMapping(headers) {
+  const map = {};
+  const normH = headers.map(normalizeKey);
+
+  Object.entries(FIELD_SYNS).forEach(([key, syns]) => {
+    for (const syn of syns) {
+      // Correspondance exacte d'abord
+      let idx = normH.findIndex(h => h === syn);
+      // Puis correspondance partielle
+      if (idx === -1) idx = normH.findIndex(h => h.includes(syn) || syn.includes(h));
+      if (idx !== -1 && map[key] === undefined) { map[key] = idx; break; }
+    }
+  });
+  return map;
+}
+
+// ─── TRAITEMENT DES DONNÉES ───────────────────────────────────────────────────
+function processData(rows) {
+  // Remise à zéro totale — aucune donnée en cache
+  RAW_DATA = [];
+  let skipped = 0;
+  const warnings = [];
+
+  rows.forEach((row, rowIdx) => {
+    const get = key => {
+      const idx = mapping[key];
+      return idx !== undefined && idx < row.length ? row[idx] : '';
+    };
+
+    // ── Date (obligatoire) ──
+    const rawDate = get('date');
+    const isoDate = toDate(rawDate);
+    if (!isoDate) {
+      skipped++;
+      if (skipped <= 3) warnings.push(`Ligne ${rowIdx+2} : date invalide "${rawDate}"`);
+      return;
+    }
+
+    // ── Numériques ──
+    const traites   = toNum(get('traites'));
+    const perdusMapped = toNum(get('perdus'));
+    const entrantsMapped = toNum(get('entrants'));
+    // Reconstitution si entrants absent
+    const entrants = entrantsMapped > 0 ? entrantsMapped : (traites + perdusMapped);
+    const sl20  = toNum(get('sl20'));
+    const sl10  = toNum(get('sl10'));
+    const fcr   = toNum(get('fcr'));
+    const dmt   = toNum(get('dmt'));
+    const dmpc  = toNum(get('dmpc'));
+
+    // ── Textes ──
+    const pole  = toText(get('pole'))  || 'Non défini';
+    const sous  = toText(get('sous'))  || 'Non défini';
+    const file  = toText(get('file'))  || '';
+    const agent = toText(get('agent')) || '';
+    const mois  = toText(get('mois'))  || '';
+
+    // ── Qualification ──
+    const qualifRaw = toText(get('qualif')).toUpperCase().trim();
+    const isQualifie = qualifRaw === 'QUALIFIE' || qualifRaw === 'QUALIFIÉ';
+
+    // ── Validation cohérence ──
+    if (entrants === 0 && traites === 0 && sous === 'Non défini') {
+      skipped++;
+      return;
+    }
+
+    RAW_DATA.push({
+      date: isoDate, pole, sous, file, agent, mois,
+      entrants, traites, sl20, sl10, fcr, dmt, dmpc,
+      qualifie: isQualifie ? 1 : 0,
+    });
+  });
+
+  // ── Info panel ──
+  const dates = RAW_DATA.map(r => r.date).sort();
+  const period = dates.length
+    ? fmtDate(dates[0]) + ' → ' + fmtDate(dates[dates.length-1])
+    : '—';
+
+  document.getElementById('dataInfo').style.display = 'flex';
+  document.getElementById('infoSource').textContent  = 'TELCO OI';
+  document.getElementById('infoRows').textContent    = RAW_DATA.length.toLocaleString('fr-FR');
+  document.getElementById('infoSkipped').textContent = skipped;
+  document.getElementById('infoPeriod').textContent  = period;
+  document.getElementById('infoSync').textContent    = new Date().toLocaleTimeString('fr-FR');
+
+  // Avertissements
+  if (warnings.length) showWarn('⚠ Données ignorées : ' + warnings.join(' | '));
+
+  updateLastUpdate();
+  populateFilters();
+  filtered = [...RAW_DATA];
+  renderAll();
+
+  // Flash de confirmation
+  const btn = document.getElementById('btnSync');
+  btn.textContent = '✓ Synchronisé';
+  setTimeout(() => { btn.textContent = '⟳ Synchroniser'; }, 2000);
+}
+
+// ─── MAPPING MANUEL ───────────────────────────────────────────────────────────
+function showMapper(headers, missingKeys) {
+  const panel = document.getElementById('mapperPanel');
+  panel.classList.add('show');
+  const allFields = Object.keys(FIELD_SYNS).map(k => ({ key: k, label: k, required: k === 'date' }));
+  const opts = h => ['<option value="">— ignorer —</option>',
+    ...headers.map((hh, i) => `<option value="${i}"${i===mapping[h]?' selected':''}>${hh}</option>`)
+  ].join('');
+  document.getElementById('mapperGrid').innerHTML = allFields.map(f =>
+    `<div class="mapper-field"><span class="mapper-label">${f.label}${f.required?' <span>*</span>':''}</span>
+     <select id="map_${f.key}">${opts(f.key)}</select></div>`
+  ).join('');
+  document.getElementById('mapperHint').textContent =
+    missingKeys.length + ' champ(s) requis non détecté(s) : ' + missingKeys.join(', ');
+}
+
+function confirmMapping() {
+  const m = {};
+  Object.keys(FIELD_SYNS).forEach(k => {
+    const sel = document.getElementById('map_' + k);
+    if (sel && sel.value !== '') m[k] = parseInt(sel.value);
+  });
+  if (m.date === undefined) { showError('Le champ Date est obligatoire.'); return; }
+  mapping = m;
+  clearError();
+  document.getElementById('mapperPanel').classList.remove('show');
+  processData(window._pendingRows || []);
+}
+
+// ─── FILTRES ─────────────────────────────────────────────────────────────────
+function populateFilters() {
+  const pe = document.getElementById('filterPole');
+  const se = document.getElementById('filterSous');
+  const me = document.getElementById('filterMois');
+  const prevPole = pe.value, prevSous = se.value, prevMois = me.value;
+  pe.innerHTML = '<option value="">Tous les pôles</option>';
+  se.innerHTML = '<option value="">Toutes</option>';
+  me.innerHTML = '<option value="">Tous les mois</option>';
+  [...new Set(RAW_DATA.map(r => r.pole))].sort()
+    .forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; pe.appendChild(o); });
+  [...new Set(RAW_DATA.map(r => r.sous))].sort()
+    .forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; se.appendChild(o); });
+
+  // Mois extraits de r.date (YYYY-MM), triés, libellé "Janv. 2025"
+  const MOIS_FR = ['Janv.','Févr.','Mars','Avr.','Mai','Juin','Juil.','Août','Sept.','Oct.','Nov.','Déc.'];
+  [...new Set(RAW_DATA.map(r => r.date ? r.date.slice(0,7) : null).filter(Boolean))].sort()
+    .forEach(ym => {
+      const [y, m] = ym.split('-');
+      const o = document.createElement('option');
+      o.value = ym;
+      o.textContent = MOIS_FR[parseInt(m)-1] + ' ' + y;
+      me.appendChild(o);
+    });
+
+  // Restaurer la sélection si elle existe encore
+  if ([...pe.options].some(o => o.value === prevPole)) pe.value = prevPole;
+  if ([...se.options].some(o => o.value === prevSous)) se.value = prevSous;
+  if ([...me.options].some(o => o.value === prevMois)) me.value = prevMois;
+
+  const dates = RAW_DATA.map(r => r.date).sort();
+  if (dates.length) {
+    document.getElementById('dateFrom').value = dates[0];
+    document.getElementById('dateTo').value   = dates[dates.length - 1];
+  }
+}
+
+function onMoisChange() {
+  const mois = document.getElementById('filterMois').value;
+  if (mois) {
+    // Calculer le premier et dernier jour du mois sélectionné
+    const [y, m] = mois.split('-').map(Number);
+    // Dernier jour : jour 0 du mois suivant (ex: mois=6 → new Date(2026,6,0).getDate() = 30)
+    const lastDayNum = new Date(y, m, 0).getDate();
+    const pad = n => String(n).padStart(2, '0');
+    // Construction directe en ISO YYYY-MM-DD sans conversion UTC
+    document.getElementById('dateFrom').value = `${y}-${pad(m)}-01`;
+    document.getElementById('dateTo').value   = `${y}-${pad(m)}-${pad(lastDayNum)}`;
+  } else {
+    // Réinitialiser aux bornes globales des données
+    const dates = RAW_DATA.map(r => r.date).sort();
+    if (dates.length) {
+      document.getElementById('dateFrom').value = dates[0];
+      document.getElementById('dateTo').value   = dates[dates.length - 1];
+    }
+  }
+  applyFilters();
+}
+
+function applyFilters() {
+  const from = document.getElementById('dateFrom').value;
+  const to   = document.getElementById('dateTo').value;
+  const pole = document.getElementById('filterPole').value;
+  const sous = document.getElementById('filterSous').value;
+  const mois = document.getElementById('filterMois').value;
+  filtered = RAW_DATA.filter(r => {
+    if (pole && r.pole !== pole) return false;
+    if (sous && r.sous !== sous) return false;
+    // Filtre mois prioritaire sur dates début/fin
+    if (mois) {
+      const rMois = r.date ? r.date.slice(0,7) : null;
+      if (rMois !== mois) return false;
+    } else {
+      if (from && r.date < from) return false;
+      if (to   && r.date > to)   return false;
+    }
+    return true;
+  });
+  renderAll();
+}
+
+function resetFilters() {
+  const dates = RAW_DATA.map(r => r.date).sort();
+  if (dates.length) {
+    document.getElementById('dateFrom').value = dates[0];
+    document.getElementById('dateTo').value   = dates[dates.length - 1];
+  }
+  document.getElementById('filterPole').value = '';
+  document.getElementById('filterSous').value = '';
+  document.getElementById('filterMois').value = '';
+  filtered = [...RAW_DATA];
+  renderAll();
+}
+
+// ─── KPIs ─────────────────────────────────────────────────────────────────────
+function computeKPIs(data) {
+  if (!data.length) return null;
+  const sum = key => data.reduce((a, r) => a + r[key], 0);
+  const totalEntrants = sum('entrants');
+  const totalTraites  = sum('traites');
+  const totalSl20     = sum('sl20');
+  const totalSl10     = sum('sl10');
+  const totalFcr      = sum('fcr');
+  const totalQualifie = sum('qualifie');
+  const totalPerdus   = Math.max(0, totalEntrants - totalTraites);
+  let dmtW=0, dmtT=0, dmpcW=0, dmpcT=0;
+  data.forEach(r => {
+    const w = r.traites || 1;
+    if (r.dmt  > 0) { dmtW  += r.dmt  * w; dmtT  += w; }
+    if (r.dmpc > 0) { dmpcW += r.dmpc * w; dmpcT += w; }
+  });
+  const pct = (n, d) => d > 0 ? ((n / d) * 100).toFixed(1) : null;
+  return {
+    dmt:  dmtT  ? Math.round(dmtW  / dmtT)  : null,
+    dmpc: dmpcT ? Math.round(dmpcW / dmpcT) : null,
+    tauxQualifie: pct(totalQualifie, totalTraites),
+    totalQualifie,
+    totalFcr,
+    qs:   pct(totalTraites,  totalEntrants) || '0.0',
+    sl:   pct(totalSl20, totalTraites),
+    sl10: pct(totalSl10, totalTraites),
+    fcr:  pct(totalFcr,  totalTraites),
+    totalEntrants, totalTraites, totalPerdus,
+    tauxPerdus: pct(totalPerdus, totalEntrants),
+  };
+}
+
+function fmtHHMMSS(s) {
+  if (s === null || s === undefined) return '—';
+  s = Math.round(s);
+  const h   = Math.floor(s / 3600);
+  const m   = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+}
+
+function renderKPIs(kpi) {
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  if (!kpi) {
+    ['kpiDmt','kpiDmpc','kpiDmc','kpiDmcSub','kpiQs','kpiSl','kpiFcr',
+     'kpiTotalTraites','kpiTotalEntrants','kpiTauxPerdus','kpiTauxPerdusAbs']
+      .forEach(id => set(id, '—'));
+    return;
+  }
+  set('kpiDmt',          kpi.dmt  !== null ? fmtHHMMSS(kpi.dmt)  : '—');
+  set('kpiDmpc',         kpi.dmpc !== null ? fmtHHMMSS(kpi.dmpc) : '—');
+  set('kpiDmc',          kpi.tauxQualifie !== null ? kpi.tauxQualifie + '%' : '—');
+  set('kpiDmcSub',       kpi.tauxQualifie !== null
+    ? kpi.totalQualifie.toLocaleString('fr-FR') + ' QUALIFIÉ / ' + kpi.totalTraites.toLocaleString('fr-FR') + ' traités'
+    : 'Colonne NOM_QUALIFICATION non détectée');
+  set('kpiQs',           kpi.qs + '%');
+  set('kpiSl',           kpi.sl  !== null ? kpi.sl  + '%' : '—');
+  set('kpiFcr',          kpi.fcr !== null ? kpi.fcr + '%' : '—');
+  set('kpiTotalTraites', kpi.totalTraites.toLocaleString('fr-FR'));
+  set('kpiTotalEntrants',kpi.totalEntrants.toLocaleString('fr-FR'));
+  set('kpiTauxPerdus',   kpi.tauxPerdus !== null ? kpi.tauxPerdus + '%' : '—');
+  set('kpiTauxPerdusAbs',kpi.totalPerdus.toLocaleString('fr-FR') + ' app. perdus');
+}
+
+// ─── TABLEAU ──────────────────────────────────────────────────────────────────
+function pillQS(v) {
+  v = parseFloat(v);
+  if (isNaN(v)) return '<span class="pill pill-amber">—</span>';
+  const cls = v >= 85 ? 'pill-green' : v >= 70 ? 'pill-amber' : 'pill-red';
+  return `<span class="pill ${cls}">${v.toFixed(1)}%</span>`;
+}
+
+function renderTableSous(data) {
+  const g = {};
+  data.forEach(r => {
+    if (!g[r.sous]) g[r.sous] = { entrants:0, traites:0, sl20:0, dmtW:0, dmtT:0 };
+    const d = g[r.sous];
+    d.entrants += r.entrants;
+    d.traites  += r.traites;
+    d.sl20     += r.sl20;
+    if (r.dmt > 0) { d.dmtW += r.dmt * (r.traites || 1); d.dmtT += (r.traites || 1); }
+  });
+  const keys = Object.keys(g).sort();
+  document.getElementById('sousBadge').textContent = keys.length + ' sous-campagne(s)';
+  const tbody = document.getElementById('tbodySous');
+  tbody.innerHTML = '';
+  if (!keys.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Aucune donnée</td></tr>'; return; }
+  keys.forEach(k => {
+    const d = g[k];
+    const perdus    = Math.max(0, d.entrants - d.traites);
+    const tauxPerd  = d.entrants > 0 ? (perdus / d.entrants * 100) : 0;
+    const dmtMoy    = d.dmtT ? Math.round(d.dmtW / d.dmtT) : null;
+    const slPct     = d.traites && d.sl20 > 0 ? (d.sl20 / d.traites * 100).toFixed(1) : null;
+    const tauxCls   = tauxPerd < 5 ? 'pill-green' : tauxPerd < 15 ? 'pill-amber' : 'pill-red';
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      `<td><strong>${k}</strong></td>` +
+      `<td class="num mono">${d.entrants.toLocaleString('fr-FR')}</td>` +
+      `<td class="num-tiffany">${d.traites.toLocaleString('fr-FR')}</td>` +
+      `<td class="num-red">${perdus > 0 ? perdus.toLocaleString('fr-FR') : '<span style="color:#0abfbc;font-family:\'JetBrains Mono\',monospace;font-size:0.76rem;">0</span>'}</td>` +
+      `<td class="num"><span class="pill ${tauxCls}">${tauxPerd.toFixed(1)}%</span></td>` +
+      `<td class="num-grey">${dmtMoy !== null ? fmtHHMMSS(dmtMoy) : '—'}</td>` +
+      `<td class="num">${slPct !== null ? pillQS(parseFloat(slPct)) + `<span style="font-size:0.62rem;color:var(--muted);margin-left:4px;">(${d.sl20.toLocaleString('fr-FR')} app.)</span>` : '<span class="pill pill-amber">—</span>'}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ─── GRAPHIQUE MENSUEL ────────────────────────────────────────────────────────
+function renderChart(data) {
+  const MOIS_FR = ['Janv.','Févr.','Mars','Avr.','Mai','Juin','Juil.','Août','Sept.','Oct.','Nov.','Déc.'];
+  const byMonth = {};
+  data.forEach(r => {
+    const ym = r.date ? r.date.slice(0,7) : null;
+    if (!ym) return;
+    if (!byMonth[ym]) byMonth[ym] = { entrants:0, traites:0 };
+    byMonth[ym].entrants += r.entrants;
+    byMonth[ym].traites  += r.traites;
+  });
+  const keys     = Object.keys(byMonth).sort();
+  const labels   = keys.map(ym => { const [y,m] = ym.split('-'); return MOIS_FR[parseInt(m)-1]+' '+y; });
+  const entrants = keys.map(k => byMonth[k].entrants);
+  const traites  = keys.map(k => byMonth[k].traites);
+  const qs       = keys.map(k => byMonth[k].entrants ? +((byMonth[k].traites/byMonth[k].entrants)*100).toFixed(1) : 0);
+  const pole = document.getElementById('filterPole').value;
+  const sous = document.getElementById('filterSous').value;
+  document.getElementById('chartLabel').textContent = pole || sous || 'Vue globale';
+  if (chart) { chart.destroy(); chart = null; }
+  if (!keys.length) return;
+  const ctx = document.getElementById('mainChart').getContext('2d');
+  chart = new Chart(ctx, {
+    data: { labels, datasets: [
+      { type:'bar',  label:'Appels entrants', data:entrants, backgroundColor:'rgba(125,216,214,0.5)', borderColor:'rgba(125,216,214,0.9)', borderWidth:1, borderRadius:6, yAxisID:'yVol', order:2 },
+      { type:'bar',  label:'Appels traités',  data:traites,  backgroundColor:'rgba(10,191,188,0.5)',  borderColor:'rgba(10,191,188,0.9)',  borderWidth:1, borderRadius:6, yAxisID:'yVol', order:3 },
+      { type:'line', label:'QS (%)',           data:qs,       borderColor:'#aaa', backgroundColor:'rgba(180,180,180,0.1)', borderWidth:2.5, pointBackgroundColor:'#aaa', pointRadius:6, pointHoverRadius:8, fill:true, tension:0.35, yAxisID:'yPct', order:1 },
+    ]},
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{labels:{color:'#444',font:{family:'Sora',size:11},padding:20,usePointStyle:true}},
+        tooltip:{backgroundColor:'#f5f5f5',borderColor:'#ccc',borderWidth:1,titleColor:'#222',bodyColor:'#777',padding:12,
+          callbacks:{label:ctx=>{if(ctx.dataset.label==='QS (%)') return ' QS : '+ctx.parsed.y+'%'; return ' '+ctx.dataset.label+' : '+ctx.parsed.y.toLocaleString('fr-FR');}}},
+      },
+      scales:{
+        x:    {ticks:{color:'#666',font:{family:'Sora',size:11}},grid:{color:'rgba(180,180,180,0.4)'}},
+        yVol: {position:'left',  title:{display:true,text:"Volume d'appels",color:'#666',font:{size:10}}, ticks:{color:'#666',font:{family:'JetBrains Mono',size:10}},grid:{color:'rgba(180,180,180,0.4)'}},
+        yPct: {position:'right', title:{display:true,text:'QS (%)',color:'#888',font:{size:10}}, ticks:{color:'#888',font:{family:'JetBrains Mono',size:10},callback:v=>v+'%'},grid:{drawOnChartArea:false},min:0,max:100},
+      },
+    },
+  });
+}
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function fmtDate(iso) {
+  const [y, m, d] = iso.split('-');
+  return d && m && y ? d+'/'+m+'/'+y.slice(2) : iso;
+}
+
+// ─── TABLEAU COMPARAISON MENSUELLE — PAGE 1 ───────────────────────────────────
+function renderMonthlyTable1(data) {
+  const MOIS_FR = ['Janv.','Févr.','Mars','Avr.','Mai','Juin','Juil.','Août','Sept.','Oct.','Nov.','Déc.'];
+
+  // Regrouper par mois YYYY-MM depuis toutes les données (RAW_DATA) sans filtre de mois
+  // mais en respectant les autres filtres (pole, sous, dates)
+  const byMonth = {};
+  data.forEach(r => {
+    const ym = r.date ? r.date.slice(0,7) : null;
+    if (!ym) return;
+    if (!byMonth[ym]) byMonth[ym] = { entrants:0, traites:0, sl20:0, fcr:0, qualifie:0, dmtW:0, dmtT:0 };
+    const m = byMonth[ym];
+    m.entrants  += r.entrants;
+    m.traites   += r.traites;
+    m.sl20      += r.sl20;
+    m.fcr       += r.fcr;
+    m.qualifie  += r.qualifie;
+    if (r.dmt > 0) { m.dmtW += r.dmt * (r.traites||1); m.dmtT += (r.traites||1); }
+  });
+
+  const months = Object.keys(byMonth).sort();
+  const head = document.getElementById('monthlyHead1');
+  const body = document.getElementById('monthlyBody1');
+  const badge = document.getElementById('monthlyBadge1');
+
+  if (!months.length) {
+    head.innerHTML = '<tr><th>KPI</th></tr>';
+    body.innerHTML = '<tr><td colspan="2" class="empty-state" style="text-align:center;padding:20px;">Aucune donnée</td></tr>';
+    if (badge) badge.textContent = '—';
+    return;
+  }
+
+  if (badge) badge.textContent = months.length + ' mois';
+
+  // En-tête : ligne avec les mois
+  head.innerHTML = `<tr>
+    <th style="text-align:left;position:sticky;left:0;z-index:2;">KPI</th>
+    ${months.map(ym => {
+      const [y, mo] = ym.split('-');
+      return `<th style="text-align:right;">${MOIS_FR[parseInt(mo)-1]} ${y}</th>`;
+    }).join('')}
+  </tr>`;
+
+  // KPI definitions for page 1
+  const pct = (n, d) => d > 0 ? (n/d*100).toFixed(1)+'%' : '—';
+  const pill1 = (v) => {
+    if (v === '—') return `<span style="color:var(--muted);">—</span>`;
+    const n = parseFloat(v);
+    const cls = n >= 85 ? 'mt-pct-good' : n >= 70 ? 'mt-pct-mid' : 'mt-pct-bad';
+    return `<span class="${cls}">${v}</span>`;
+  };
+  const pillPerd = (v) => {
+    if (v === '—') return `<span style="color:var(--muted);">—</span>`;
+    const n = parseFloat(v);
+    const cls = n < 5 ? 'mt-pct-good' : n < 15 ? 'mt-pct-mid' : 'mt-pct-bad';
+    return `<span class="${cls}">${v}</span>`;
+  };
+
+  // Calcul totaux pour ligne total
+  const totals = { entrants:0, traites:0, sl20:0, fcr:0, qualifie:0, dmtW:0, dmtT:0 };
+  months.forEach(ym => {
+    const m = byMonth[ym];
+    totals.entrants  += m.entrants;
+    totals.traites   += m.traites;
+    totals.sl20      += m.sl20;
+    totals.fcr       += m.fcr;
+    totals.qualifie  += m.qualifie;
+    totals.dmtW      += m.dmtW;
+    totals.dmtT      += m.dmtT;
+  });
+
+  const kpis = [
+    {
+      label: '📞 Appels entrants',
+      cell: m => `<span class="mt-num-grey">${m.entrants.toLocaleString('fr-FR')}</span>`,
+      total: `<span class="mt-num-grey">${totals.entrants.toLocaleString('fr-FR')}</span>`
+    },
+    {
+      label: '✅ Appels traités',
+      cell: m => `<span class="mt-num">${m.traites.toLocaleString('fr-FR')}</span>`,
+      total: `<span class="mt-num">${totals.traites.toLocaleString('fr-FR')}</span>`
+    },
+    {
+      label: '📵 Appels perdus',
+      cell: m => { const p = Math.max(0, m.entrants - m.traites); return `<span class="mt-num-red">${p.toLocaleString('fr-FR')}</span>`; },
+      total: () => { const p = Math.max(0, totals.entrants - totals.traites); return `<span class="mt-num-red">${p.toLocaleString('fr-FR')}</span>`; }
+    },
+    {
+      label: '📉 Taux perdus',
+      cell: m => { const p = Math.max(0, m.entrants - m.traites); return pillPerd(pct(p, m.entrants)); },
+      total: () => { const p = Math.max(0, totals.entrants - totals.traites); return pillPerd(pct(p, totals.entrants)); }
+    },
+    {
+      label: '⏱ DMT moy.',
+      cell: m => `<span class="mt-num-grey">${m.dmtT ? fmtHHMMSS(Math.round(m.dmtW/m.dmtT)) : '—'}</span>`,
+      total: `<span class="mt-num-grey">${totals.dmtT ? fmtHHMMSS(Math.round(totals.dmtW/totals.dmtT)) : '—'}</span>`
+    },
+    {
+      label: '✅ QS (%)',
+      cell: m => pill1(pct(m.traites, m.entrants)),
+      total: () => pill1(pct(totals.traites, totals.entrants))
+    },
+    {
+      label: '⚡ SL < 20s',
+      cell: m => pill1(pct(m.sl20, m.traites)),
+      total: () => pill1(pct(totals.sl20, totals.traites))
+    },
+    {
+      label: '🎯 New FCR',
+      cell: m => `<span class="mt-pct-good">${pct(m.fcr, m.traites)}</span>`,
+      total: () => `<span class="mt-pct-good">${pct(totals.fcr, totals.traites)}</span>`
+    },
+    {
+      label: '🏷️ Taux Qualifié',
+      cell: m => `<span class="mt-num">${pct(m.qualifie, m.traites)}</span>`,
+      total: () => `<span class="mt-num">${pct(totals.qualifie, totals.traites)}</span>`
+    },
+  ];
+
+  body.innerHTML = kpis.map(kpi => {
+    const cells = months.map(ym => `<td>${kpi.cell(byMonth[ym])}</td>`).join('');
+    return `<tr><td>${kpi.label}</td>${cells}</tr>`;
+  }).join('');
+}
+
+function renderAll() { renderKPIs(computeKPIs(filtered)); renderTableSous(filtered); renderChart(filtered); renderMonthlyTable1(filtered); }
+function showLoading(msg) { document.getElementById('loadingMsg').textContent = msg; document.getElementById('loadingOverlay').classList.remove('hidden'); }
+function hideLoading()    { document.getElementById('loadingOverlay').classList.add('hidden'); }
+function showError(msg)   { const el = document.getElementById('errorBanner'); el.innerHTML = '⚠️ ' + msg; el.classList.add('show'); }
+function clearError()     { document.getElementById('errorBanner').classList.remove('show'); }
+function showWarn(msg)    { const el = document.getElementById('warnBanner'); el.textContent = msg; el.classList.add('show'); }
+function clearWarn()      { document.getElementById('warnBanner').classList.remove('show'); }
+function updateLastUpdate(){ document.getElementById('lastUpdate').textContent = 'Mis à jour : ' + new Date().toLocaleDateString('fr-FR') + ' ' + new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ── NAVIGATION ────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+function switchTab(n) {
+  [1,2].forEach(i => {
+    document.getElementById('tab'+i).classList.toggle('active', i===n);
+    document.getElementById('page'+i).classList.toggle('active', i===n);
+  });
+  if (n === 2) {
+    tRenderEmpty();
+    if (T_RAW_DATA.length === 0) {
+      tSetLoadingState(true);
+      tFetchAndProcess(T_TICKETS_URL).catch(e => {
+        tSetLoadingState(false);
+        tShowError('Erreur : ' + e.message);
+      });
+    } else {
+      tRenderAll();
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ── PAGE 2 — TICKETS ──────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const T_DEFAULT_URL_PLACEHOLDER = '';
+
+// Synonymes de colonnes pour l'onglet Tickets
+const T_FIELD_SYNS = {
+  dateReception:  ['date_reception_s2','datereception','date_reception','reception_s2','dates2','receptions2','date_recep','datereceptions2'],
+  dateTraitement: ['date_debut_traitement','datedebuttraitement','date_debut','datedebuttraitement','date_trait','date_traitement','datetraitement'],
+  dateFin:        ['date_fin_traitement','datefintraitement','date_fin','datefin','date_cloture','datecloture','date_fermeture','datefermeture','fin_traitement','fintraitement'],
+  dateEnreg:      ['date_enregistrement','dateenregistrement','date_enreg','enregistrement','date_saisie','datesaisie'],
+  dmt:            ['dmt','duree_moyenne_traitement','durée_moyenne_traitement','duree_traitement','dureetraitement'],
+  zone:           ['zone','region','secteur','territoire'],
+  type:           ['type','typedossier','type_dossier','categorie','type_ticket','typeticket'],
+  statut:         ['statut','status','etat','etat_dossier','statutdossier'],
+  motifRejet:     ['motif_rejet','motifRejet','motifdeRejet','motif_de_rejet','motif','raisonrejet','raison_rejet','rejet'],
+  boutique:       ['boutique','magasin','agence','shop','point_de_vente','pointdevente','pdv'],
+};
+
+let T_RAW_DATA = [], T_FILTERED = [], T_MAPPING = {}, T_ACTIVE_URL = '';
+
+// ── Helpers dates ─────────────────────────────────────────────────────────────
+function tToDate(raw) {
+  if (!raw) return null;
+  const s = cleanStr(raw);
+  if (!s) return null;
+
+  // ── Format JS long : "Mon Jan 06 2025 00:00:00 GMT+0300 (heure normale d'Afrique de l'Est)"
+  // Extraire YYYY depuis le premier groupe de 4 chiffres, mois depuis le nom anglais
+  const jsLong = s.match(/([A-Za-z]{3})\s+([A-Za-z]{3})\s+(\d{1,2})\s+(\d{4})/);
+  if (jsLong) {
+    const MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+    const mo = MONTHS[jsLong[2].toLowerCase()];
+    const d  = parseInt(jsLong[3]);
+    const y  = jsLong[4];
+    if (mo && d && y) return y+'-'+String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+  }
+
+  // ── Serial Excel (5 chiffres entre 40000 et 60000) ──
+  if (/^\d{5}$/.test(s)) {
+    const n = parseInt(s);
+    if (n > 40000 && n < 60000) {
+      const d = new Date(Date.UTC(1899,11,30) + n*86400000);
+      return d.toISOString().slice(0,10);
+    }
+  }
+
+  // ── ISO YYYY-MM-DD ──
+  const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (iso) return iso[1]+'-'+iso[2].padStart(2,'0')+'-'+iso[3].padStart(2,'0');
+
+  // ── Format français DD/MM/YYYY ou DD-MM-YYYY ──
+  const fr = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
+  if (fr) {
+    let [,d,mo,y] = fr;
+    if (y.length===2) y='20'+y;
+    if (parseInt(d)>31||parseInt(mo)>12) return null;
+    return y+'-'+mo.padStart(2,'0')+'-'+d.padStart(2,'0');
+  }
+
+  return null;
+}
+
+// ── Conversion DMT → secondes (HH:MM:SS, MM:SS, 1m50s, 1h20m30s, nb brut) ───
+function tDmtToSeconds(raw) {
+  if (!raw) return null;
+  const s = cleanStr(raw).trim();
+  if (!s) return null;
+
+  // Format "1m50s", "2h3m10s", "45s", "3h", "2m" etc.
+  const compact = s.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/i);
+  if (compact && (compact[1]||compact[2]||compact[3])) {
+    const h = parseInt(compact[1]||0), m = parseInt(compact[2]||0), sec = parseInt(compact[3]||0);
+    return h*3600 + m*60 + sec;
+  }
+
+  // Format HH:MM:SS ou MM:SS
+  const parts = s.split(':');
+  if (parts.length === 3) {
+    const [h, m, sec] = parts.map(Number);
+    if (!isNaN(h) && !isNaN(m) && !isNaN(sec)) return h * 3600 + m * 60 + sec;
+  }
+  if (parts.length === 2) {
+    const [m, sec] = parts.map(Number);
+    if (!isNaN(m) && !isNaN(sec)) return m * 60 + sec;
+  }
+
+  // Nombre brut (secondes)
+  const n = parseFloat(s.replace(',', '.'));
+  return isNaN(n) ? null : Math.round(n);
+}
+
+// ── Conversion date/heure complète → timestamp ms ─────────────────────────────
+// Gère le format JS long : "Tue May 26 2026 09:26:00 GMT+0300 (heure normale d'Afrique de l'Est)"
+// Retourne un timestamp (ms) ou null
+function tToDateTime(raw) {
+  if (!raw) return null;
+  const s = cleanStr(raw);
+  if (!s) return null;
+
+  // Format JS long avec heure : "Tue May 26 2026 09:26:00 GMT+0300 (...)"
+  // Capturer : jour_semaine mois jour année heure:min:sec GMT+offset
+  const jsLong = s.match(/[A-Za-z]{3}\s+([A-Za-z]{3})\s+(\d{1,2})\s+(\d{4})\s+(\d{2}):(\d{2}):(\d{2})\s+GMT([+\-]\d{4})/);
+  if (jsLong) {
+    const MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+    const mo  = MONTHS[jsLong[1].toLowerCase()];
+    const d   = parseInt(jsLong[2]);
+    const y   = parseInt(jsLong[3]);
+    const h   = parseInt(jsLong[4]);
+    const min = parseInt(jsLong[5]);
+    const sec = parseInt(jsLong[6]);
+    const tz  = jsLong[7]; // ex: "+0300"
+    const tzH = parseInt(tz.slice(0,3));
+    const tzM = parseInt(tz.slice(0,1) + tz.slice(3));
+    if (mo && d && y) {
+      // Construire le timestamp UTC
+      const utcMs = Date.UTC(y, mo-1, d, h - tzH, min - tzM, sec);
+      return utcMs;
+    }
+  }
+
+  // Format JS long sans heure (date seule)
+  const jsDate = s.match(/[A-Za-z]{3}\s+([A-Za-z]{3})\s+(\d{1,2})\s+(\d{4})/);
+  if (jsDate) {
+    const MONTHS = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+    const mo = MONTHS[jsDate[1].toLowerCase()];
+    const d  = parseInt(jsDate[2]);
+    const y  = parseInt(jsDate[3]);
+    if (mo) return Date.UTC(y, mo-1, d, 0, 0, 0);
+  }
+
+  // ISO YYYY-MM-DD HH:MM:SS ou YYYY-MM-DDTHH:MM:SS
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})/);
+  if (iso) return new Date(iso[0]).getTime();
+
+  // ISO date seule YYYY-MM-DD
+  const isoD = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoD) return Date.UTC(parseInt(isoD[1]), parseInt(isoD[2])-1, parseInt(isoD[3]));
+
+  // Format français DD/MM/YYYY HH:MM:SS
+  const frDT = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (frDT) {
+    let [,dd,mm,yy,hh,mi,ss] = frDT;
+    if (yy.length===2) yy='20'+yy;
+    return Date.UTC(parseInt(yy), parseInt(mm)-1, parseInt(dd), parseInt(hh), parseInt(mi), parseInt(ss||0));
+  }
+
+  // Format français date seule DD/MM/YYYY
+  const frD = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
+  if (frD) {
+    let [,dd,mm,yy] = frD;
+    if (yy.length===2) yy='20'+yy;
+    return Date.UTC(parseInt(yy), parseInt(mm)-1, parseInt(dd));
+  }
+
+  return null;
+}
+
+// Différence en secondes entre deux timestamps
+function diffSecondes(ts1, ts2) {
+  if (ts1 === null || ts2 === null) return null;
+  const diff = Math.round((ts2 - ts1) / 1000);
+  return diff;
+}
+
+
+
+function diffJoursOuvres(d1, d2) {
+  if (!d1||!d2) return null;
+  let a = new Date(d1), b = new Date(d2);
+  if (isNaN(a)||isNaN(b)) return null;
+  if (a > b) [a,b] = [b,a];
+  let count = 0, cur = new Date(a);
+  while (cur <= b) {
+    const dow = cur.getDay();
+    if (dow !== 0 && dow !== 6) count++;
+    cur.setDate(cur.getDate()+1);
+  }
+  return count - 1; // exclure le jour de départ
+}
+
+// ── Auto-détection mapping ────────────────────────────────────────────────────
+function tAutoDetectMapping(headers) {
+  const map = {};
+  const normH = headers.map(normalizeKey);
+  Object.entries(T_FIELD_SYNS).forEach(([key, syns]) => {
+    for (const syn of syns) {
+      let idx = normH.findIndex(h => h === syn);
+      if (idx===-1) idx = normH.findIndex(h => h.includes(syn)||syn.includes(h));
+      if (idx !== -1 && map[key] === undefined) { map[key] = idx; break; }
+    }
+  });
+  return map;
+}
+
+// ── Fetch & Process ───────────────────────────────────────────────────────────
+async function tSyncNow() {
+  const url = T_ACTIVE_URL || document.getElementById('tCsvUrlInput').value.trim();
+  if (!url) { tShowError('Veuillez entrer l\'URL CSV de l\'onglet Tickets.'); return; }
+  const btn = document.getElementById('tBtnSync');
+  btn.disabled = true; btn.textContent = '⟳ Chargement…';
+  tClearError();
+  try {
+    await tFetchAndProcess(url);
+  } catch(e) {
+    tShowError('Impossible de charger les données Tickets. ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = '⟳ Synchroniser';
+}
+
+function tLoadFromUrl() {
+  const url = document.getElementById('tCsvUrlInput').value.trim();
+  if (!url) { tShowError('Veuillez entrer une URL CSV valide.'); return; }
+  T_ACTIVE_URL = url;
+  tSyncNow();
+}
+
+async function tFetchAndProcess(url) {
+  T_ACTIVE_URL = url;
+  tClearError();
+  let csvText = null;
+
+  // Try direct fetch first
+  try {
+    const r = await fetch(url, { cache: 'no-store', redirect: 'follow' });
+    if (r.ok) { const t = await r.text(); if (t && t.trim().length > 10) csvText = t; }
+  } catch(e) {}
+
+  // Fallback: CORS proxies
+  if (!csvText) {
+    const proxies = [
+      u => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+      u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+      u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+    ];
+    for (const p of proxies) {
+      try {
+        const r = await fetch(p(url), { cache: 'no-store' });
+        if (r.ok) { const t = await r.text(); if (t && t.trim().length > 10) { csvText = t; break; } }
+      } catch(e) {}
+    }
+  }
+
+  tSetLoadingState(false);
+
+  if (!csvText) {
+    tShowError('Impossible de charger le Google Sheet. Vérifiez que la feuille est publiée en CSV (Fichier → Partager → Publier sur le web → Tickets → CSV).');
+    tRenderEmpty();
+    return;
+  }
+
+  const rows = parseCSV(csvText);
+  if (rows.length < 2) { tShowError('Le CSV Tickets est vide ou ne contient pas de données.'); tRenderEmpty(); return; }
+  const headers = rows[0].map(h => cleanStr(h));
+  T_MAPPING = tAutoDetectMapping(headers);
+  tProcessData(rows.slice(1).filter(r => r.some(c => c.trim() !== '')));
+}
+
+function tSetLoadingState(on) {
+  const lbl = document.getElementById('tLoadLabel');
+  if (lbl) lbl.style.display = on ? 'flex' : 'none';
+}
+
+function tRenderEmpty() {
+  document.getElementById('tKpiDmt').textContent = '—';
+  document.getElementById('tKpiDmpc').textContent = '—';
+  document.getElementById('tKpiTotal').textContent = '0';
+  document.getElementById('tKpiRejets').textContent = '0';
+  document.getElementById('tKpiSous24h').textContent = '—';
+  const pct24el = document.getElementById('tKpiSous24hPct');
+  if (pct24el) pct24el.textContent = '—';
+  const s24 = document.getElementById('tKpiSous24hSub');
+  if (s24) s24.textContent = 'Tickets pris en charge en moins de 24h (DMPC)';
+  document.getElementById('tStatusGrid').innerHTML = '<div class="status-card" style="--sc:#ccc;"><div class="sc-label">Aucune donnée</div><div class="sc-count">—</div></div>';
+  document.getElementById('tTop5Motifs').innerHTML = '<div class="empty-state">Aucune donnée chargée</div>';
+  document.getElementById('tTop5Boutiques').innerHTML = '<div class="empty-state">Aucune donnée chargée</div>';
+  document.getElementById('tTotalRejBadge').textContent = '—';
+  document.getElementById('tTotalBoutBadge').textContent = '—';
+  const tb = document.getElementById('tBodyRejets');
+  if (tb) tb.innerHTML = '<tr><td colspan="4" class="empty-state">Aucune donnée chargée</td></tr>';
+  const rb = document.getElementById('tRejTableBadge');
+  if (rb) rb.textContent = '—';
+}
+
+function tProcessData(rows) {
+  T_RAW_DATA = [];
+  const today = new Date().toISOString().slice(0,10);
+  rows.forEach(row => {
+    const get = key => {
+      const idx = T_MAPPING[key];
+      return idx !== undefined && idx < row.length ? row[idx] : '';
+    };
+    const rawRec    = get('dateReception');
+    const rawTrait  = get('dateTraitement');
+    const rawFin    = get('dateFin');
+    const dateRec   = tToDate(rawRec) || today;
+    const dateTrait = tToDate(rawTrait);
+    const dateEnreg = tToDate(get('dateEnreg')) || dateRec;
+    // DMT = Fin traitement − Début traitement (timestamps complets si dispo, sinon colonne DMT brute)
+    const tsTrait  = tToDateTime(rawTrait);
+    const tsFin    = tToDateTime(rawFin);
+    const dmtCalc  = (tsFin !== null && tsTrait !== null) ? diffSecondes(tsTrait, tsFin) : null;
+    const dmtSec   = (dmtCalc !== null && dmtCalc >= 0) ? dmtCalc : tDmtToSeconds(get('dmt'));
+    // DMPC = Date début traitement – Réception S2 (en secondes avec timestamp complet)
+    const tsRec   = tToDateTime(rawRec);
+    const tsTraitDmpc = tToDateTime(rawTrait);
+    const dmpcSec = (tsTraitDmpc !== null && tsRec !== null) ? diffSecondes(tsRec, tsTraitDmpc) : null;
+    const zone    = cleanStr(get('zone'))    || 'Non définie';
+    const type    = cleanStr(get('type'))    || 'Non défini';
+    const statut  = cleanStr(get('statut')).toUpperCase() || 'INCONNU';
+    const motif   = cleanStr(get('motifRejet'));
+    const boutique = cleanStr(get('boutique')) || 'Inconnue';
+
+    T_RAW_DATA.push({ dateRec, dateTrait, dateFin: tToDate(rawFin), dateEnreg, dmtSec, dmpcSec, zone, type, statut, motif, boutique });
+  });
+
+  tPopulateFilters();
+  T_FILTERED = [...T_RAW_DATA];
+  tRenderAll();
+
+  const btn = document.getElementById('tBtnSync');
+  btn.textContent = '✓ Synchronisé';
+  setTimeout(()=>{ btn.textContent='⟳ Synchroniser'; }, 2000);
+}
+
+// ── Filtres ───────────────────────────────────────────────────────────────────
+function tPopulateFilters() {
+  const zSel = document.getElementById('tFilterZone');
+  const tSel = document.getElementById('tFilterType');
+  const mSel = document.getElementById('tFilterMois');
+  zSel.innerHTML = '<option value="">Toutes les zones</option>';
+  tSel.innerHTML = '<option value="">Tous les types</option>';
+  mSel.innerHTML = '<option value="">Tous les mois</option>';
+  [...new Set(T_RAW_DATA.map(r=>r.zone).filter(Boolean))].sort()
+    .forEach(v=>{ const o=document.createElement('option');o.value=v;o.textContent=v;zSel.appendChild(o); });
+  [...new Set(T_RAW_DATA.map(r=>r.type).filter(Boolean))].sort()
+    .forEach(v=>{ const o=document.createElement('option');o.value=v;o.textContent=v;tSel.appendChild(o); });
+
+  // Mois extraits de dateEnreg (YYYY-MM), triés, avec libellé "Janv. 2025" etc.
+  const MOIS_FR = ['Janv.','Févr.','Mars','Avr.','Mai','Juin','Juil.','Août','Sept.','Oct.','Nov.','Déc.'];
+  [...new Set(T_RAW_DATA.map(r=>r.dateEnreg ? r.dateEnreg.slice(0,7) : null).filter(Boolean))].sort()
+    .forEach(ym => {
+      const [y, m] = ym.split('-');
+      const o = document.createElement('option');
+      o.value = ym;
+      o.textContent = MOIS_FR[parseInt(m)-1] + ' ' + y;
+      mSel.appendChild(o);
+    });
+
+  // Filtre basé sur la date d'enregistrement
+  const dates = T_RAW_DATA.map(r=>r.dateEnreg).filter(Boolean).sort();
+  if (dates.length) {
+    document.getElementById('tDateFrom').value = dates[0];
+    document.getElementById('tDateTo').value   = dates[dates.length-1];
+  }
+}
+
+function tApplyFilters() {
+  const zone  = document.getElementById('tFilterZone').value;
+  const type  = document.getElementById('tFilterType').value;
+  const from  = document.getElementById('tDateFrom').value;
+  const to    = document.getElementById('tDateTo').value;
+  const mois  = document.getElementById('tFilterMois').value;
+  T_FILTERED = T_RAW_DATA.filter(r => {
+    if (zone && r.zone !== zone) return false;
+    if (type && r.type !== type) return false;
+    // Filtre mois (prioritaire sur les dates si sélectionné)
+    if (mois) {
+      const rMois = r.dateEnreg ? r.dateEnreg.slice(0,7) : null;
+      if (rMois !== mois) return false;
+    } else {
+      // Filtre sur la date d'enregistrement
+      if (from && r.dateEnreg < from) return false;
+      if (to   && r.dateEnreg > to)   return false;
+    }
+    return true;
+  });
+  tRenderAll();
+}
+
+function tResetFilters() {
+  document.getElementById('tFilterZone').value = '';
+  document.getElementById('tFilterType').value = '';
+  document.getElementById('tFilterMois').value = '';
+  const dates = T_RAW_DATA.map(r=>r.dateEnreg).filter(Boolean).sort();
+  if (dates.length) {
+    document.getElementById('tDateFrom').value = dates[0];
+    document.getElementById('tDateTo').value   = dates[dates.length-1];
+  }
+  T_FILTERED = [...T_RAW_DATA];
+  tRenderAll();
+}
+
+// ── Render principal ──────────────────────────────────────────────────────────
+function tRenderAll() {
+  tRenderDMT();
+  tRenderStatuts();
+  tRenderTop5Motifs();
+  tRenderTop5Boutiques();
+  tRenderBoutiquesTables();
+  renderMonthlyTable2(T_FILTERED);
+}
+
+// ─── TABLEAU COMPARAISON MENSUELLE — PAGE 2 ───────────────────────────────────
+function renderMonthlyTable2(data) {
+  const MOIS_FR = ['Janv.','Févr.','Mars','Avr.','Mai','Juin','Juil.','Août','Sept.','Oct.','Nov.','Déc.'];
+
+  const byMonth = {};
+  data.forEach(r => {
+    const ym = r.dateEnreg ? r.dateEnreg.slice(0,7) : null;
+    if (!ym) return;
+    if (!byMonth[ym]) byMonth[ym] = {
+      total:0, rejets:0, dmtSum:0, dmtN:0, dmpcSum:0, dmpcN:0, sous24:0, dmpcAvail:0
+    };
+    const m = byMonth[ym];
+    m.total++;
+    if (r.motif && r.motif.trim() !== '') m.rejets++;
+    if (r.dmtSec !== null && r.dmtSec >= 0) { m.dmtSum += r.dmtSec; m.dmtN++; }
+    if (r.dmpcSec !== null && r.dmpcSec >= 0) {
+      m.dmpcSum += r.dmpcSec; m.dmpcN++;
+      m.dmpcAvail++;
+      if (r.dmpcSec < 86400) m.sous24++;
+    }
+  });
+
+  const months = Object.keys(byMonth).sort();
+  const head = document.getElementById('monthlyHead2');
+  const body = document.getElementById('monthlyBody2');
+  const badge = document.getElementById('monthlyBadge2');
+
+  if (!months.length) {
+    head.innerHTML = '<tr><th>KPI</th></tr>';
+    body.innerHTML = '<tr><td colspan="2" class="empty-state" style="text-align:center;padding:20px;">Aucune donnée</td></tr>';
+    if (badge) badge.textContent = '—';
+    return;
+  }
+
+  if (badge) badge.textContent = months.length + ' mois';
+
+  head.innerHTML = `<tr>
+    <th style="text-align:left;position:sticky;left:0;z-index:2;">KPI</th>
+    ${months.map(ym => {
+      const [y, mo] = ym.split('-');
+      return `<th style="text-align:right;">${MOIS_FR[parseInt(mo)-1]} ${y}</th>`;
+    }).join('')}
+  </tr>`;
+
+  const fmtDMTC = s => {
+    if (s === null || s === undefined) return '—';
+    s = Math.round(s);
+    const h = Math.floor(s/3600), mi = Math.floor((s%3600)/60), sec = s%60;
+    if (h > 0) return `${h}h${String(mi).padStart(2,'0')}m`;
+    if (mi > 0) return `${mi}m${String(sec).padStart(2,'0')}s`;
+    return `${sec}s`;
+  };
+
+  const pct = (n, d) => d > 0 ? (n/d*100).toFixed(1)+'%' : '—';
+  const pillRej = v => {
+    if (v === '—') return `<span style="color:var(--muted);">—</span>`;
+    const n = parseFloat(v);
+    const cls = n < 10 ? 'mt-pct-good' : n < 25 ? 'mt-pct-mid' : 'mt-pct-bad';
+    return `<span class="${cls}">${v}</span>`;
+  };
+  const pill24 = v => {
+    if (v === '—') return `<span style="color:var(--muted);">—</span>`;
+    const n = parseFloat(v);
+    const cls = n >= 80 ? 'mt-pct-good' : n >= 50 ? 'mt-pct-mid' : 'mt-pct-bad';
+    return `<span class="${cls}">${v}</span>`;
+  };
+
+  const kpis = [
+    {
+      label: '🎫 Total tickets',
+      cell: m => `<span class="mt-num-grey">${m.total.toLocaleString('fr-FR')}</span>`
+    },
+    {
+      label: '🚫 Rejets',
+      cell: m => `<span class="mt-num-red">${m.rejets.toLocaleString('fr-FR')}</span>`
+    },
+    {
+      label: '📉 Taux de rejet',
+      cell: m => pillRej(pct(m.rejets, m.total))
+    },
+    {
+      label: '⏱ DMT moy.',
+      cell: m => `<span class="mt-num-grey">${m.dmtN ? fmtDMTC(Math.round(m.dmtSum/m.dmtN)) : '—'}</span>`
+    },
+    {
+      label: '📬 DMPC moy.',
+      cell: m => `<span class="mt-num">${m.dmpcN ? fmtDMTC(Math.round(m.dmpcSum/m.dmpcN)) : '—'}</span>`
+    },
+    {
+      label: '⚡ DMPC < 24h',
+      cell: m => `<span class="mt-num">${m.sous24.toLocaleString('fr-FR')}</span>`
+    },
+    {
+      label: '⚡ Taux DMPC < 24h',
+      cell: m => pill24(pct(m.sous24, m.total))
+    },
+  ];
+
+  body.innerHTML = kpis.map(kpi =>
+    `<tr><td>${kpi.label}</td>${months.map(ym => `<td>${kpi.cell(byMonth[ym])}</td>`).join('')}</tr>`
+  ).join('');
+}
+
+function tRenderDMT() {
+  const data = T_FILTERED;
+  let dmtSum=0, dmtN=0, dmpcSum=0, dmpcN=0;
+  data.forEach(r => {
+    if (r.dmtSec !== null && r.dmtSec >= 0) { dmtSum += r.dmtSec; dmtN++; }
+    // DMPC : calculé uniquement si les deux dates sont présentes et cohérentes
+    if (r.dmpcSec !== null && r.dmpcSec >= 0) { dmpcSum += r.dmpcSec; dmpcN++; }
+  });
+
+  const dmtMoy = dmtN ? Math.round(dmtSum / dmtN) : null;
+  const fmtDmt = s => {
+    if (s === null) return '—';
+    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+    if (h > 0) return `${h}h ${m.toString().padStart(2,'0')}m ${sec.toString().padStart(2,'0')}s (${s.toLocaleString('fr-FR')} s)`;
+    if (m > 0) return `${m}m ${sec.toString().padStart(2,'0')}s (${s.toLocaleString('fr-FR')} s)`;
+    return `${sec} s`;
+  };
+
+  const dmpcMoy = dmpcN ? Math.round(dmpcSum / dmpcN) : null;
+  const fmtDmpc = (v, n) => {
+    if (v === null || n === 0) return '—';
+    v = Math.round(v);
+    const h = Math.floor(v / 3600), m = Math.floor((v % 3600) / 60), sec = v % 60;
+    if (h > 0) return `${h}h ${String(m).padStart(2,'0')}m ${String(sec).padStart(2,'0')}s (${v.toLocaleString('fr-FR')} s)`;
+    if (m > 0) return `${m}m ${String(sec).padStart(2,'0')}s (${v.toLocaleString('fr-FR')} s)`;
+    return `${sec} s`;
+  };
+
+  document.getElementById('tKpiDmt').textContent  = fmtDmt(dmtMoy);
+  document.getElementById('tKpiDmpc').textContent = fmtDmpc(dmpcMoy, dmpcN);
+  requestAnimationFrame(autoFitDmtVals);
+
+  // Sous-libellé DMPC avec compteur
+  const subDmpc = document.getElementById('tKpiDmpcSub');
+  if (subDmpc) subDmpc.textContent = dmpcN
+    ? `Calculé sur ${dmpcN.toLocaleString('fr-FR')} ticket(s) avec date de traitement`
+    : 'Colonne date début traitement non détectée ou absente';
+
+  document.getElementById('tKpiTotal').textContent = data.length.toLocaleString('fr-FR');
+  const rejets = data.filter(r=>r.motif && r.motif.trim()!=='').length;
+  document.getElementById('tKpiRejets').textContent = rejets.toLocaleString('fr-FR');
+
+  // KPI : tickets avec DMPC < 24h (86 400 secondes)
+  const totalDmpc  = data.filter(r => r.dmpcSec !== null && r.dmpcSec >= 0).length;
+  const sous24     = data.filter(r => r.dmpcSec !== null && r.dmpcSec >= 0 && r.dmpcSec < 86400).length;
+  const totalTix   = data.length; // total tickets filtrés
+  const pct24      = totalTix > 0 ? ((sous24 / totalTix) * 100).toFixed(1) : null;
+  document.getElementById('tKpiSous24h').textContent = sous24.toLocaleString('fr-FR');
+  const pct24el = document.getElementById('tKpiSous24hPct');
+  if (pct24el) pct24el.textContent = pct24 !== null ? pct24 + ' %' : '—';
+  const sub24 = document.getElementById('tKpiSous24hSub');
+  if (sub24) sub24.textContent = totalDmpc > 0
+    ? `Sur ${totalTix.toLocaleString('fr-FR')} tickets · DMPC disponible : ${totalDmpc.toLocaleString('fr-FR')}`
+    : 'Colonnes Réception S2 / Début traitement non détectées';
+
+  // Sous-libéllé DMT : indiquer la source du calcul
+  const subDmt = document.getElementById('tKpiDmtSub');
+  if (subDmt) {
+    const hasCalc = data.some(r => r.dmtSec !== null && r.dmtSec >= 0);
+    subDmt.textContent = hasCalc
+      ? `Calculé sur ${dmtN.toLocaleString('fr-FR')} ticket(s) (Fin − Début traitement)`
+      : 'Colonnes Fin / Début traitement non détectées';
+  }
+}
+
+// ── Statuts ───────────────────────────────────────────────────────────────────
+const STATUT_COLORS = {
+  'TRAITE':    '#0abfbc', 'CLÔTURÉ':  '#0abfbc', 'CLOTURE':   '#0abfbc',
+  'EN COURS':  '#f0a500', 'ENCOURS':  '#f0a500', 'EN ATTENTE':'#f0a500',
+  'REJETÉ':    '#e05c5c', 'REJETE':   '#e05c5c', 'REJET':     '#e05c5c',
+  'OUVERT':    '#7dd8d6', 'NOUVEAU':  '#7dd8d6',
+  'SUSPENDU':  '#aaa',    'ANNULÉ':   '#bbb',    'ANNULE':    '#bbb',
+};
+function tGetColor(s) {
+  return STATUT_COLORS[s.toUpperCase()] || '#888';
+}
+
+function tRenderStatuts() {
+  const data = T_FILTERED;
+  const total = data.length;
+  const counts = {};
+  data.forEach(r => { counts[r.statut] = (counts[r.statut]||0)+1; });
+  const grid = document.getElementById('tStatusGrid');
+  if (!Object.keys(counts).length) {
+    grid.innerHTML = '<div class="status-card" style="--sc:#ccc;"><div class="sc-label">Aucune donnée</div><div class="sc-count">—</div></div>';
+    return;
+  }
+  grid.innerHTML = Object.entries(counts)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([s,n]) => {
+      const pct = total>0?((n/total)*100).toFixed(1):0;
+      const col = tGetColor(s);
+      return `<div class="status-card" style="--sc:${col};">
+        <div class="sc-label">${s}</div>
+        <div class="sc-count" style="color:${col};">${n.toLocaleString('fr-FR')}</div>
+        <div class="sc-pct">${pct}% des tickets</div>
+      </div>`;
+    }).join('');
+}
+
+// ── Top 5 Motifs ──────────────────────────────────────────────────────────────
+function tRenderTop5Motifs() {
+  const data = T_FILTERED;
+  const counts = {};
+  data.forEach(r => {
+    if (r.motif && r.motif.trim()!=='') counts[r.motif.trim()] = (counts[r.motif.trim()]||0)+1;
+  });
+  const total = Object.values(counts).reduce((a,b)=>a+b,0);
+  document.getElementById('tTotalRejBadge').textContent = total + ' rejet(s)';
+  const top5 = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const container = document.getElementById('tTop5Motifs');
+  if (!top5.length) { container.innerHTML = '<div class="empty-state">Aucun motif de rejet</div>'; return; }
+  const max = top5[0][1];
+  container.innerHTML = top5.map(([label,n],i) => {
+    const pct = total>0?((n/total)*100).toFixed(1):0;
+    const barW = max>0?Math.round((n/max)*100):0;
+    return `<div class="rank-row">
+      <div class="rank-num ${i===1?'r2':i===2?'r3':i>=3?'r4':''}">${i+1}</div>
+      <div class="rank-label" title="${label}">${label}</div>
+      <div class="rank-bar-wrap"><div class="rank-bar" style="width:${barW}%"></div></div>
+      <div class="rank-count">${n}</div>
+      <div class="rank-pct">${pct}%</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Top 5 Boutiques ───────────────────────────────────────────────────────────
+function tRenderTop5Boutiques() {
+  const data = T_FILTERED;
+  const counts = {};
+  data.forEach(r => {
+    if (r.motif && r.motif.trim()!=='') counts[r.boutique] = (counts[r.boutique]||0)+1;
+  });
+  const total = Object.values(counts).reduce((a,b)=>a+b,0);
+  document.getElementById('tTotalBoutBadge').textContent = total + ' rejet(s)';
+  const top5 = Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const container = document.getElementById('tTop5Boutiques');
+  if (!top5.length) { container.innerHTML = '<div class="empty-state">Aucune boutique avec rejet</div>'; return; }
+  const max = top5[0][1];
+  container.innerHTML = top5.map(([label,n],i) => {
+    const pct = total>0?((n/total)*100).toFixed(1):0;
+    const barW = max>0?Math.round((n/max)*100):0;
+    return `<div class="rank-row">
+      <div class="rank-num ${i===1?'r2':i===2?'r3':i>=3?'r4':''}">${i+1}</div>
+      <div class="rank-label" title="${label}">${label}</div>
+      <div class="rank-bar-wrap"><div class="rank-bar" style="width:${barW}%;background:linear-gradient(90deg,#7dd8d6,#0abfbc);"></div></div>
+      <div class="rank-count">${n}</div>
+      <div class="rank-pct">${pct}%</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Tableau Boutique × Motif de rejet ─────────────────────────────────────────
+function tRenderTableRejets() {
+  const data = T_FILTERED.filter(r => r.motif && r.motif.trim() !== '');
+  const total = data.length;
+  const tbody = document.getElementById('tBodyRejets');
+  const badge = document.getElementById('tRejTableBadge');
+  if (badge) badge.textContent = total.toLocaleString('fr-FR') + ' rejet(s)';
+  if (!tbody) return;
+  if (!total) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Aucun rejet dans la sélection</td></tr>';
+    return;
+  }
+  // Agréger par Boutique + Motif
+  const agg = {};
+  data.forEach(r => {
+    const key = (r.boutique||'—') + '|||' + (r.motif.trim()||'—');
+    agg[key] = (agg[key] || 0) + 1;
+  });
+  const rows = Object.entries(agg)
+    .map(([k, n]) => { const [boutique, motif] = k.split('|||'); return { boutique, motif, n }; })
+    .sort((a, b) => b.n - a.n);
+  tbody.innerHTML = rows.map(r => {
+    const pct = ((r.n / total) * 100).toFixed(1);
+    const barW = Math.round((r.n / rows[0].n) * 100);
+    return `<tr>
+      <td><strong>${r.boutique}</strong></td>
+      <td>${r.motif}</td>
+      <td class="num-tiffany">${r.n.toLocaleString('fr-FR')}</td>
+      <td style="min-width:130px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
+            <div style="width:${barW}%;height:100%;background:linear-gradient(90deg,#e05c5c,#f0a0a0);border-radius:3px;"></div>
+          </div>
+          <span style="font-size:0.7rem;font-family:'JetBrains Mono',monospace;color:#e05c5c;min-width:38px;text-align:right;">${pct}%</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Helpers erreur ────────────────────────────────────────────────────────────
+function tShowError(msg) { const el=document.getElementById('tErrorBanner'); el.innerHTML='⚠️ '+msg; el.classList.add('show'); }
+function tClearError()   { document.getElementById('tErrorBanner').classList.remove('show'); }
+
+// ── Top 5 Boutiques — Tableaux individuels ────────────────────────────────────
+function tRenderBoutiquesTables() {
+  const data = T_FILTERED;
+  const container = document.getElementById('tBoutiqueTablesGrid');
+  if (!container) return;
+
+  // Compter les rejets par boutique (pour le ranking)
+  const boutRejets = {};
+  data.forEach(r => {
+    if (r.motif && r.motif.trim() !== '') {
+      boutRejets[r.boutique] = (boutRejets[r.boutique] || 0) + 1;
+    }
+  });
+
+  // Top 5 boutiques par nombre de rejets
+  const top5Bouts = Object.entries(boutRejets)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([b]) => b);
+
+  if (!top5Bouts.length) {
+    container.innerHTML = '<div class="panel" style="grid-column:1/-1;"><div class="panel-body"><div class="empty-state">Aucune boutique avec rejet dans la sélection</div></div></div>';
+    return;
+  }
+
+  const RANK_COLORS = ['#0abfbc','#7dd8d6','#aaa','#c0c0c0','#d5d5d5'];
+  const BORDER_COLORS = [
+    'rgba(10,191,188,0.5)','rgba(125,216,214,0.5)','rgba(170,170,170,0.4)',
+    'rgba(192,192,192,0.4)','rgba(200,200,200,0.35)'
+  ];
+
+  container.innerHTML = top5Bouts.map((boutique, idx) => {
+    // Total tickets de cette boutique (tous statuts, pas seulement les rejets)
+    const totalTicketsBout = data.filter(r => r.boutique === boutique).length;
+
+    // Motifs de rejet pour cette boutique
+    const motifCounts = {};
+    data.forEach(r => {
+      if (r.boutique === boutique && r.motif && r.motif.trim() !== '') {
+        motifCounts[r.motif.trim()] = (motifCounts[r.motif.trim()] || 0) + 1;
+      }
+    });
+    const top5Motifs = Object.entries(motifCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const totalRejBout = boutRejets[boutique] || 0;
+    const rankColor = RANK_COLORS[idx];
+    const borderColor = BORDER_COLORS[idx];
+
+    const rows = top5Motifs.map(([motif, n], mi) => {
+      const tauxBout = totalTicketsBout > 0 ? ((n / totalTicketsBout) * 100).toFixed(1) : '0.0';
+      const barW = top5Motifs[0][1] > 0 ? Math.round((n / top5Motifs[0][1]) * 100) : 0;
+      const rowBg = mi === 0 ? `background:${rankColor}12;` : (mi % 2 === 1 ? 'background:rgba(0,0,0,0.018);' : '');
+      const badgeColor = mi === 0 ? rankColor : mi === 1 ? rankColor+'bb' : mi === 2 ? rankColor+'88' : 'var(--border)';
+      const badgeText = mi < 3 ? '#fff' : 'var(--muted)';
+      return `<tr style="${rowBg}">
+        <td style="padding:8px 10px;max-width:0;width:55%;">
+          <div style="display:flex;align-items:flex-start;gap:7px;">
+            <span style="width:18px;height:18px;border-radius:50%;background:${badgeColor};color:${badgeText};font-size:0.62rem;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'JetBrains Mono',monospace;margin-top:1px;">${mi+1}</span>
+            <span style="font-size:0.78rem;font-weight:500;color:var(--text);line-height:1.35;word-break:break-word;overflow-wrap:anywhere;">${motif}</span>
+          </div>
+        </td>
+        <td style="padding:8px 8px;text-align:right;white-space:nowrap;width:18%;">
+          <span style="color:${rankColor};font-family:'JetBrains Mono',monospace;font-size:0.82rem;font-weight:700;">${n.toLocaleString('fr-FR')}</span>
+        </td>
+        <td style="padding:8px 10px;width:27%;">
+          <div style="display:flex;flex-direction:column;gap:3px;">
+            <div style="display:flex;align-items:center;gap:5px;">
+              <div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden;">
+                <div style="width:${barW}%;height:100%;background:linear-gradient(90deg,${rankColor},${rankColor}88);border-radius:3px;"></div>
+              </div>
+            </div>
+            <span style="font-size:0.78rem;font-family:'JetBrains Mono',monospace;color:${rankColor};font-weight:700;text-align:right;">${tauxBout}%</span>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+
+    const tauxRejGlobal = totalTicketsBout > 0 ? ((totalRejBout / totalTicketsBout) * 100).toFixed(1) : '0.0';
+
+    return `<div class="panel" style="border-color:${borderColor};border-top:3px solid ${rankColor};">
+      <div class="panel-header" style="border-bottom-color:${borderColor};padding:10px 14px;">
+        <div style="display:flex;align-items:center;gap:9px;min-width:0;flex:1;overflow:hidden;">
+          <span style="width:26px;height:26px;border-radius:50%;background:${rankColor};color:#fff;font-size:0.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;flex-shrink:0;">${idx+1}</span>
+          <span style="font-size:0.88rem;font-weight:700;color:${rankColor};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${boutique}">🏪 ${boutique}</span>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 14px 6px;border-bottom:1px solid var(--border);background:var(--bg);">
+        <span style="font-size:0.68rem;color:var(--muted);font-family:'JetBrains Mono',monospace;">${totalTicketsBout.toLocaleString('fr-FR')} tickets</span>
+        <span style="font-size:0.7rem;font-family:'JetBrains Mono',monospace;font-weight:700;color:#e05c5c;">${totalRejBout.toLocaleString('fr-FR')} rejets · ${tauxRejGlobal}%</span>
+      </div>
+      <div style="padding:0;">
+        <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+          <thead>
+            <tr style="background:var(--bg);">
+              <th style="text-align:left;padding:6px 10px;color:var(--muted);font-size:0.64rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid var(--border);width:55%;">Motif de rejet</th>
+              <th style="text-align:right;padding:6px 8px;color:var(--muted);font-size:0.64rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid var(--border);white-space:nowrap;width:18%;">Nb</th>
+              <th style="text-align:right;padding:6px 10px;color:var(--muted);font-size:0.64rem;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid var(--border);white-space:nowrap;width:27%;">Taux</th>
+            </tr>
+          </thead>
+          <tbody>${rows || '<tr><td colspan="3" style="text-align:center;padding:16px;color:var(--muted);font-size:0.78rem;">Aucun motif enregistré</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Init URL Tickets — chargement automatique ─────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  // ── Initialisation des champs URL ────────────────────────────────────────────
+  document.getElementById('csvUrlInput').value  = DEFAULT_URL;
+  document.getElementById('tCsvUrlInput').value = T_TICKETS_URL;
+  T_ACTIVE_URL = T_TICKETS_URL;
+
+  // ── Chargement initial des deux sources en parallèle ─────────────────────────
+  tRenderEmpty();
+
+  // Page 1 — chargement immédiat
+  syncNow();
+
+  // Page 2 — chargement différé de 500 ms pour ne pas saturer les proxies
+  setTimeout(() => {
+    tSetLoadingState(true);
+    tFetchAndProcess(T_TICKETS_URL).catch(e => {
+      tSetLoadingState(false);
+      tShowError('Erreur de chargement : ' + e.message + '. Vérifiez que la feuille est publiée en CSV.');
+    });
+  }, 500);
+
+  // ── Auto-synchronisation silencieuse toutes les 2 minutes ────────────────────
+  const SYNC_INTERVAL = 2 * 60; // secondes
+  let countdown = SYNC_INTERVAL;
+
+  // Countdown affiché dans le header
+  const countdownEl = document.getElementById('syncCountdown');
+  setInterval(() => {
+    countdown--;
+    if (countdown <= 0) {
+      // Déclenchement réel de la synchronisation sur les deux sources
+      countdown = SYNC_INTERVAL;
+      const url1 = activeUrl || DEFAULT_URL;
+      const url2 = T_ACTIVE_URL || T_TICKETS_URL;
+
+      // Sync silencieuse Page 1 : sans spinner ni flash bouton
+      fetchAndProcess(url1).then(() => {
+        const btn = document.getElementById('btnSync');
+        if (btn) { btn.textContent = '✓ Synchronisé'; setTimeout(() => { btn.textContent = '⟳ Synchroniser'; }, 2000); }
+      }).catch(() => {});
+
+      // Sync silencieuse Page 2
+      tFetchAndProcess(url2).catch(() => {});
+    }
+
+    // Mise à jour du countdown affiché
+    const m = Math.floor(countdown / 60);
+    const s = String(countdown % 60).padStart(2, '0');
+    if (countdownEl) countdownEl.textContent = `⟳ auto-sync dans ${m}:${s}`;
+  }, 1000);
+});
+</script>
+</body>
+</html>
